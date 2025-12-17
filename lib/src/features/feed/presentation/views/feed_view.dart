@@ -31,7 +31,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
   void _closePanel() {
     FocusScope.of(context).unfocus();
     setState(() {
-      _isPanelOpen = false;      
+      _isPanelOpen = false;
     });
   }
 
@@ -40,6 +40,58 @@ class _FeedViewState extends ConsumerState<FeedView> {
     final videoState = ref.watch(videoFeedProvider);
     final videos = videoState.videos;
     final currentIndex = videoState.currentIndex;
+
+    if (videoState.isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primaryBrand),
+        ),
+      );
+    }
+
+    if (videoState.error != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Oops! Something went wrong.',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  videoState.error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.read(videoFeedProvider.notifier).fetchVideos();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBrand,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -53,16 +105,14 @@ class _FeedViewState extends ConsumerState<FeedView> {
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            top: _isPanelOpen ? 60 : 0, // Move down slightly or keep at top
+            top: -20, // Move down slightly or keep at top
             left: 0,
             right: 0,
-            height: _isPanelOpen 
-                ? MediaQuery.of(context).size.height * 0.35 // Shrink to 35% height
-                : MediaQuery.of(context).size.height,
+            height: MediaQuery.of(context).size.height,
             child: GestureDetector(
               onTap: _closePanel,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(_isPanelOpen ? 24 : 0),
+                borderRadius: BorderRadius.zero,
                 child: PageView.builder(
                   controller: _pageController,
                   scrollDirection: Axis.vertical,
@@ -72,11 +122,13 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   },
                   itemBuilder: (context, index) {
                     return VideoPost(
-                      videoUrl: videos[index],
+                      video: videos[index],
                       isPlaying: index == currentIndex && !_isPanelOpen,
                       hideContent: _isPanelOpen,
-                      onStartQuiz: () => _openPanel("Quiz Time! 🎮", const QuizPanel()),
-                      onShowComments: () => _openPanel("Comments 💬", const CommentsPanel()),
+                      onStartQuiz: () =>
+                          _openPanel("Quiz Time! 🎮", const QuizPanel()),
+                      onShowComments: () =>
+                          _openPanel("Comments 💬", const CommentsPanel()),
                     );
                   },
                 ),
@@ -92,12 +144,18 @@ class _FeedViewState extends ConsumerState<FeedView> {
               right: 0,
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const Text(
@@ -109,7 +167,10 @@ class _FeedViewState extends ConsumerState<FeedView> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.search_rounded, color: Colors.white),
+                        icon: const Icon(
+                          Icons.search_rounded,
+                          color: Colors.white,
+                        ),
                         onPressed: () {},
                       ),
                     ],
@@ -124,7 +185,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
             curve: Curves.easeInOut,
             left: 0,
             right: 0,
-            bottom: _isPanelOpen ? 0 : -MediaQuery.of(context).size.height * 0.65,
+            bottom: _isPanelOpen
+                ? 0
+                : -MediaQuery.of(context).size.height * 0.65,
             height: MediaQuery.of(context).size.height * 0.65,
             child: InteractionPanel(
               title: _panelTitle,

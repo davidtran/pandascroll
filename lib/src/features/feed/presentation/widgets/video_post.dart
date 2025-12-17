@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -5,8 +6,11 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 
+import '../../domain/models/video_model.dart';
+import 'captions_overlay.dart';
+
 class VideoPost extends StatefulWidget {
-  final String videoUrl; // This is now the TikTok ID
+  final VideoModel video;
   final bool isPlaying;
   final bool hideContent;
   final VoidCallback onStartQuiz;
@@ -14,7 +18,7 @@ class VideoPost extends StatefulWidget {
 
   const VideoPost({
     super.key,
-    required this.videoUrl,
+    required this.video,
     required this.isPlaying,
     this.hideContent = false,
     required this.onStartQuiz,
@@ -29,6 +33,7 @@ class _VideoPostState extends State<VideoPost> {
   late WebViewController _controller;
   bool _isInitialized = false;
   bool _isLoading = false;
+  double _currentTime = 0.0;
 
   @override
   void didChangeDependencies() {
@@ -41,41 +46,66 @@ class _VideoPostState extends State<VideoPost> {
 
   void _initializeWebView() {
     final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
     const double iframeWidth = 4000;
     final double iframeHeight = screenWidth * 16 / 9;
 
-    final String htmlContent = '''
+    final String htmlContent =
+        '''
       <!DOCTYPE html>
       <html>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        
         <style>
           body {
             margin: 0;
             padding: 0;
             background-color: black;
-            height: 100vh;
-            width: 100vw;
+            display: flex;
+            justify-content: center;
+            padding-top: 0;
             overflow: hidden;
-            position: relative;
+          }
+
+          .video-container {            
+            width: ${iframeWidth}px;
+            height: ${screenHeight}px; 
+            overflow: hidden;      
+            position: relative;       
+            background: black;            
           }
           iframe {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            width: 4000px;
+            height: ${screenHeight}px;
             border: none;
           }
         </style>
       </head>
       <body>
+      <div class="video-container">
         <iframe 
           id="tiktok-frame"
-          width="$iframeWidth" 
-          height="$iframeHeight" 
-          src="https://www.tiktok.com/player/v1/${widget.videoUrl}?music_info=1&description=1&controls=0&progress_bar=0&play_button=0&native_context_menu=0&closed_caption=0&rel=0&timestamp=0&autoplay=1&loop=1" 
-          allow="fullscreen; autoplay">
+          src="https://www.tiktok.com/player/v1/${widget.video.externalId}?music_info=1&description=1&controls=0&progress_bar=0&play_button=0&native_context_menu=0&closed_caption=0&rel=0&timestamp=0&autoplay=1&loop=1" 
+          allow="autoplay">
         </iframe>
+        </div>
+        
+        <script>
+          window.addEventListener('message', function(event) {
+            if (event.origin === "https://www.tiktok.com") {
+              const data = event.data;
+              if (data && data.type === "onCurrentTime") {
+                 if (window.FlutterCaptions) {
+                   window.FlutterCaptions.postMessage(JSON.stringify(data));
+                 }
+              }
+            }
+          });
+        </script>
       </body>
       </html>
     ''';
@@ -91,12 +121,41 @@ class _VideoPostState extends State<VideoPost> {
       params = const PlatformWebViewControllerCreationParams();
     }
 
-    final WebViewController controller = WebViewController.fromPlatformCreationParams(params);
+    final WebViewController controller =
+        WebViewController.fromPlatformCreationParams(params);
 
     controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
       ..enableZoom(false)
+      ..addJavaScriptChannel(
+        'FlutterCaptions',
+        onMessageReceived: (JavaScriptMessage message) {
+          try {
+            final data = jsonDecode(message.message);
+
+            if (data['type'] == 'onCurrentTime') {
+              final value = data['value'];
+              double? time;
+
+              if (value is num) {
+                time = value.toDouble();
+              } else if (value is Map) {
+                time = (value['currentTime'] as num?)?.toDouble();
+              }
+
+              if (time != null) {
+                setState(() {
+                  _currentTime = time!;
+                });
+              }
+            }
+          } catch (e) {
+            debugPrint('Error parsing JS message: $e');
+            debugPrint('Raw message: ${message.message}');
+          }
+        },
+      )
       ..loadHtmlString(htmlContent)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -106,7 +165,7 @@ class _VideoPostState extends State<VideoPost> {
                 _isInitialized = true;
               });
               // Apply initial state after a short delay to allow iframe to load
-              Future.delayed(const Duration(milliseconds: 500), _applyState);
+              Future.delayed(const Duration(milliseconds: 100), _applyState);
             }
           },
         ),
@@ -162,7 +221,9 @@ class _VideoPostState extends State<VideoPost> {
 
         // Loading Indicator
         if (!_isInitialized)
-          const Center(child: CircularProgressIndicator(color: AppColors.primaryBrand)),
+          const Center(
+            child: CircularProgressIndicator(color: AppColors.primaryBrand),
+          ),
 
         // Gradient Overlay
         Container(
@@ -179,6 +240,17 @@ class _VideoPostState extends State<VideoPost> {
           ),
         ),
 
+        // Captions Overlay
+        Positioned(
+          left: 24,
+          right: 24,
+          bottom: 200, // Above the bottom info
+          child: CaptionsOverlay(
+            video: widget.video,
+            currentTime: _currentTime,
+          ),
+        ),
+
         // Right Side Actions
         Positioned(
           right: AppSpacing.md,
@@ -188,8 +260,8 @@ class _VideoPostState extends State<VideoPost> {
               _buildActionButton(Icons.favorite_rounded, "24.5K", Colors.red),
               const SizedBox(height: AppSpacing.lg),
               _buildActionButton(
-                Icons.comment_rounded, 
-                "1.2K", 
+                Icons.comment_rounded,
+                "1.2K",
                 Colors.white,
                 onTap: widget.onShowComments,
               ),
@@ -211,7 +283,7 @@ class _VideoPostState extends State<VideoPost> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "@SenseiPanda",
+                  "@${widget.video.authorName}",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -219,10 +291,10 @@ class _VideoPostState extends State<VideoPost> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  "Essential coffee shop phrases! ☕️ #japanese #study",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white,
-                  ),
+                  widget.video.description,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white),
                 ),
               ],
             ),
@@ -285,7 +357,12 @@ class _VideoPostState extends State<VideoPost> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, Color color, {VoidCallback? onTap}) {
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -301,7 +378,10 @@ class _VideoPostState extends State<VideoPost> {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

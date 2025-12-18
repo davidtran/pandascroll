@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 class CaptionsOverlay extends StatelessWidget {
   final VideoModel video;
   final double currentTime;
+
   final Function(String) onWordTap;
 
   const CaptionsOverlay({

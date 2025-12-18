@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
@@ -34,13 +35,31 @@ class VideoPost extends StatefulWidget {
   State<VideoPost> createState() => _VideoPostState();
 }
 
-class _VideoPostState extends State<VideoPost> {
+class _VideoPostState extends State<VideoPost>
+    with SingleTickerProviderStateMixin {
   late WebViewController _controller;
   bool _isInitialized = false;
   bool _isLoading = false;
   bool _isPaused = false;
   double _currentTime = 0.0;
-  Timer? _captionTimer;
+
+  late Ticker _ticker;
+
+  Duration _lastElapsed = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker((elapsed) {
+      if (mounted) {
+        setState(() {
+          final delta = (elapsed - _lastElapsed).inMilliseconds / 1000.0;
+          _currentTime += delta;
+          _lastElapsed = elapsed;
+        });
+      }
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -53,23 +72,19 @@ class _VideoPostState extends State<VideoPost> {
 
   @override
   void dispose() {
-    _captionTimer?.cancel();
+    _ticker.dispose();
     super.dispose();
   }
 
   void _startTimer() {
-    _captionTimer?.cancel();
-    _captionTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentTime += 0.05;
-        });
-      }
-    });
+    _lastElapsed = Duration.zero;
+    if (!_ticker.isActive) {
+      _ticker.start();
+    }
   }
 
   void _stopTimer() {
-    _captionTimer?.cancel();
+    _ticker.stop();
   }
 
   void _resetTimer() {
@@ -268,7 +283,7 @@ class _VideoPostState extends State<VideoPost> {
                 _isInitialized = true;
               });
               // Apply initial state after a short delay to allow iframe to load
-              Future.delayed(const Duration(milliseconds: 100), _applyState);
+              Future.delayed(const Duration(milliseconds: 500), _applyState);
             }
           },
         ),
@@ -288,6 +303,9 @@ class _VideoPostState extends State<VideoPost> {
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
       _applyState();
+    }
+    if (widget.video.url != oldWidget.video.url) {
+      _handleVideoChanged();
     }
     // If panel state changed (hideContent), pause/resume video
     if (widget.hideContent != oldWidget.hideContent) {
@@ -309,13 +327,22 @@ class _VideoPostState extends State<VideoPost> {
     }
   }
 
+  void _handleVideoChanged() {
+    _resetTimer();
+    setState(() {
+      _currentTime = 0.0;
+      _isInitialized = false;
+      _isPaused = false;
+    });
+  }
+
   void _applyState() {
     if (!_isInitialized) return;
 
     if (widget.isPlaying) {
-      _sendMessage("unMute");
       _sendMessage("seekTo", value: 0);
       _sendMessage("play");
+      _sendMessage("unMute");
       // Reset timer when re-playing from start (implied by seekTo 0)
       if (mounted) {
         setState(() {

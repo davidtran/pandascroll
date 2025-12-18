@@ -38,6 +38,7 @@ class _VideoPostState extends State<VideoPost> {
   late WebViewController _controller;
   bool _isInitialized = false;
   bool _isLoading = false;
+  bool _isPaused = false;
   double _currentTime = 0.0;
   Timer? _captionTimer;
 
@@ -84,6 +85,11 @@ class _VideoPostState extends State<VideoPost> {
     // Pause video immediately
     _sendMessage("pause");
     _stopTimer();
+    if (mounted) {
+      setState(() {
+        _isPaused = true;
+      });
+    }
 
     try {
       // Show loading panel
@@ -118,6 +124,19 @@ class _VideoPostState extends State<VideoPost> {
           ),
         );
       }
+    }
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _isPaused = !_isPaused;
+    });
+    if (_isPaused) {
+      _sendMessage("pause");
+      _stopTimer();
+    } else {
+      _sendMessage("play");
+      // Timer will start via onStateChange
     }
   }
 
@@ -216,8 +235,20 @@ class _VideoPostState extends State<VideoPost> {
               // 1: playing, 2: paused, 0: ended
               if (state == 1) {
                 _startTimer();
+                // Ensure UI reflects playing state if it was triggered externally
+                if (_isPaused && mounted) {
+                  setState(() {
+                    _isPaused = false;
+                  });
+                }
               } else if (state == 2) {
                 _stopTimer();
+                // Ensure UI reflects paused state
+                if (!_isPaused && mounted) {
+                  setState(() {
+                    _isPaused = true;
+                  });
+                }
               } else if (state == 0) {
                 _resetTimer();
               }
@@ -264,9 +295,15 @@ class _VideoPostState extends State<VideoPost> {
         // Panel is open, pause video
         _sendMessage("pause");
         _stopTimer();
+        setState(() {
+          _isPaused = true;
+        });
       } else if (widget.isPlaying) {
         // Panel closed and this video is active, resume
         _sendMessage("play");
+        setState(() {
+          _isPaused = false;
+        });
         // Timer will start via onStateChange
       }
     }
@@ -283,6 +320,7 @@ class _VideoPostState extends State<VideoPost> {
       if (mounted) {
         setState(() {
           _currentTime = 0.0;
+          _isPaused = false;
         });
       }
     } else {
@@ -319,20 +357,40 @@ class _VideoPostState extends State<VideoPost> {
             child: CircularProgressIndicator(color: AppColors.primaryBrand),
           ),
 
-        // Gradient Overlay
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.2),
-                Colors.transparent,
-                Colors.black.withOpacity(0.6),
-              ],
+        // Gradient Overlay & Tap Detector
+        GestureDetector(
+          onTap: _togglePlayPause,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.2),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.6),
+                ],
+              ),
             ),
           ),
         ),
+
+        // Play Icon (Centered)
+        if (_isPaused)
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 64,
+              ),
+            ),
+          ),
 
         // Right Side Actions
         Positioned(

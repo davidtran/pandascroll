@@ -98,86 +98,42 @@ class _FeedViewState extends ConsumerState<FeedView> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // Background (for when video shrinks)
-          Container(color: Colors.black),
-
-          // Video Layer (Animated)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: -20, // Move down slightly or keep at top
-            left: 0,
-            right: 0,
-            height: MediaQuery.of(context).size.height,
-            child: GestureDetector(
-              onTap: _closePanel,
-              child: ClipRRect(
-                borderRadius: BorderRadius.zero,
-                child: PageView.builder(
-                  controller: _pageController,
-                  scrollDirection: Axis.vertical,
-                  itemCount: videos.length,
-                  onPageChanged: (index) {
-                    ref.read(videoFeedProvider.notifier).onPageChanged(index);
-                  },
-                  itemBuilder: (context, index) {
-                    return VideoPost(
-                      video: videos[index],
-                      isPlaying: index == currentIndex && !_isPanelOpen,
-                      hideContent: _isPanelOpen,
-                      onStartQuiz: () =>
-                          _openPanel("Quiz Time! 🎮", const QuizPanel()),
-                      onShowComments: () =>
-                          _openPanel("Comments 💬", const CommentsPanel()),
-                    );
-                  },
-                ),
-              ),
-            ),
+          // Video PageView
+          PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: videos.length,
+            onPageChanged: ref.read(videoFeedProvider.notifier).onPageChanged,
+            itemBuilder: (context, index) {
+              return VideoPost(
+                video: videos[index],
+                isPlaying: index == currentIndex && !_isPanelOpen,
+                hideContent: _isPanelOpen,
+                onStartQuiz: () =>
+                    _openPanel("Quiz Time! 🎮", const QuizPanel()),
+                onShowComments: () =>
+                    _openPanel("Comments 💬", const CommentsPanel()),
+                onShowPanel: (title, content) => _openPanel(title, content),
+              );
+            },
           ),
 
-          // Top Bar (Overlay)
-          if (!_isPanelOpen)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white,
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      const Text(
-                        "For You",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.search_rounded,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          // Top Tabs (Learn | Feed)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildTabItem("Learn", false),
+                const SizedBox(width: 20),
+                Container(width: 1, height: 16, color: Colors.white24),
+                const SizedBox(width: 20),
+                _buildTabItem("Feed", true),
+              ],
             ),
+          ),
 
           // Interaction Panel (Animated)
           AnimatedPositioned(
@@ -194,6 +150,24 @@ class _FeedViewState extends ConsumerState<FeedView> {
               onClose: _closePanel,
               child: _panelContent,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem(String text, bool isSelected) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: isSelected ? Colors.white : Colors.white60,
+        fontSize: 18,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+        shadows: const [
+          Shadow(
+            blurRadius: 4,
+            color: Colors.black26,
+            offset: Offset(0, 1),
           ),
         ],
       ),

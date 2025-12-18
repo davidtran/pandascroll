@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -5,9 +6,11 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
-
+import '../../../../core/network/api_client.dart';
 import '../../domain/models/video_model.dart';
+import '../../domain/models/dictionary_model.dart';
 import 'captions_overlay.dart';
+import 'dictionary_panel.dart';
 
 class VideoPost extends StatefulWidget {
   final VideoModel video;
@@ -15,6 +18,7 @@ class VideoPost extends StatefulWidget {
   final bool hideContent;
   final VoidCallback onStartQuiz;
   final VoidCallback onShowComments;
+  final Function(String title, Widget content) onShowPanel;
 
   const VideoPost({
     super.key,
@@ -23,6 +27,7 @@ class VideoPost extends StatefulWidget {
     this.hideContent = false,
     required this.onStartQuiz,
     required this.onShowComments,
+    required this.onShowPanel,
   });
 
   @override
@@ -34,6 +39,7 @@ class _VideoPostState extends State<VideoPost> {
   bool _isInitialized = false;
   bool _isLoading = false;
   double _currentTime = 0.0;
+  Timer? _captionTimer;
 
   @override
   void didChangeDependencies() {
@@ -41,6 +47,77 @@ class _VideoPostState extends State<VideoPost> {
     if (!_isLoading) {
       _isLoading = true;
       _initializeWebView();
+    }
+  }
+
+  @override
+  void dispose() {
+    _captionTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _captionTimer?.cancel();
+    _captionTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentTime += 0.05;
+        });
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _captionTimer?.cancel();
+  }
+
+  void _resetTimer() {
+    _stopTimer();
+    if (mounted) {
+      setState(() {
+        _currentTime = -1.0;
+      });
+    }
+  }
+
+  void _handleWordTap(String word) async {
+    // Pause video immediately
+    _sendMessage("pause");
+    _stopTimer();
+
+    try {
+      // Show loading panel
+      widget.onShowPanel(
+        "Loading...",
+        const Center(
+          child: CircularProgressIndicator(color: AppColors.primaryBrand),
+        ),
+      );
+
+      print('Look up word: $word');
+
+      final data = await ApiClient.post('/dictionary', body: {'word': word});
+      final dictionaryData = DictionaryModel.fromJson(data['data'][0]);
+
+      if (mounted) {
+        widget.onShowPanel(
+          "Dictionary 📖",
+          DictionaryPanel(data: dictionaryData),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error fetching dictionary data: $e");
+      if (mounted) {
+        widget.onShowPanel(
+          "Error",
+          Center(
+            child: Text(
+              "Could not load definition for $word",
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -98,7 +175,7 @@ class _VideoPostState extends State<VideoPost> {
           window.addEventListener('message', function(event) {
             if (event.origin === "https://www.tiktok.com") {
               const data = event.data;
-              if (data && data.type === "onCurrentTime") {
+              if (data && data.type === "onStateChange") {
                  if (window.FlutterCaptions) {
                    window.FlutterCaptions.postMessage(JSON.stringify(data));
                  }
@@ -134,20 +211,15 @@ class _VideoPostState extends State<VideoPost> {
           try {
             final data = jsonDecode(message.message);
 
-            if (data['type'] == 'onCurrentTime') {
-              final value = data['value'];
-              double? time;
-
-              if (value is num) {
-                time = value.toDouble();
-              } else if (value is Map) {
-                time = (value['currentTime'] as num?)?.toDouble();
-              }
-
-              if (time != null) {
-                setState(() {
-                  _currentTime = time!;
-                });
+            if (data['type'] == 'onStateChange') {
+              final state = data['value'] as int?;
+              // 1: playing, 2: paused, 0: ended
+              if (state == 1) {
+                _startTimer();
+              } else if (state == 2) {
+                _stopTimer();
+              } else if (state == 0) {
+                _resetTimer();
               }
             }
           } catch (e) {
@@ -186,6 +258,18 @@ class _VideoPostState extends State<VideoPost> {
     if (widget.isPlaying != oldWidget.isPlaying) {
       _applyState();
     }
+    // If panel state changed (hideContent), pause/resume video
+    if (widget.hideContent != oldWidget.hideContent) {
+      if (widget.hideContent) {
+        // Panel is open, pause video
+        _sendMessage("pause");
+        _stopTimer();
+      } else if (widget.isPlaying) {
+        // Panel closed and this video is active, resume
+        _sendMessage("play");
+        // Timer will start via onStateChange
+      }
+    }
   }
 
   void _applyState() {
@@ -195,6 +279,12 @@ class _VideoPostState extends State<VideoPost> {
       _sendMessage("unMute");
       _sendMessage("seekTo", value: 0);
       _sendMessage("play");
+      // Reset timer when re-playing from start (implied by seekTo 0)
+      if (mounted) {
+        setState(() {
+          _currentTime = 0.0;
+        });
+      }
     } else {
       _sendMessage("mute");
       _sendMessage("play"); // Keep playing but muted (preloading)
@@ -213,6 +303,10 @@ class _VideoPostState extends State<VideoPost> {
 
   @override
   Widget build(BuildContext context) {
+    final progress = widget.video.durationSeconds > 0
+        ? (_currentTime / widget.video.durationSeconds).clamp(0.0, 1.0)
+        : 0.0;
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -240,23 +334,14 @@ class _VideoPostState extends State<VideoPost> {
           ),
         ),
 
-        // Captions Overlay
-        Positioned(
-          left: 24,
-          right: 24,
-          bottom: 200, // Above the bottom info
-          child: CaptionsOverlay(
-            video: widget.video,
-            currentTime: _currentTime,
-          ),
-        ),
-
         // Right Side Actions
         Positioned(
           right: AppSpacing.md,
-          bottom: 100,
+          bottom: 120, // Adjusted for progress bar and button
           child: Column(
             children: [
+              _buildProfileButton(),
+              const SizedBox(height: AppSpacing.lg),
               _buildActionButton(Icons.favorite_rounded, "24.5K", Colors.red),
               const SizedBox(height: AppSpacing.lg),
               _buildActionButton(
@@ -266,42 +351,69 @@ class _VideoPostState extends State<VideoPost> {
                 onTap: widget.onShowComments,
               ),
               const SizedBox(height: AppSpacing.lg),
-              _buildActionButton(Icons.share_rounded, "450", Colors.white),
+              _buildActionButton(
+                Icons.closed_caption,
+                "Captions",
+                Colors.white,
+              ),
             ],
           ),
         ),
 
-        // Bottom Info (Hidden when panel is open)
+        // Left Side Content (Captions & Title)
         Positioned(
           left: AppSpacing.md,
+          right: 80, // Space for right actions
+          bottom: 120,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Captions Overlay
+              CaptionsOverlay(
+                video: widget.video,
+                currentTime: _currentTime,
+                onWordTap: _handleWordTap,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              // Title / Description
+              Text(
+                widget.video.description, // Using description as title for now
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    const Shadow(
+                      blurRadius: 4,
+                      color: Colors.black45,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+
+        // Progress Bar
+        Positioned(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
           bottom: 100,
-          right: 80,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: widget.hideContent ? 0.0 : 1.0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "@${widget.video.authorName}",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  widget.video.description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.white),
-                ),
-              ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white24,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 4,
             ),
           ),
         ),
 
-        // Start Quiz Button (Hidden when panel is open)
+        // Start Quiz Button
         Positioned(
           bottom: AppSpacing.lg,
           left: AppSpacing.lg,
@@ -357,6 +469,18 @@ class _VideoPostState extends State<VideoPost> {
     );
   }
 
+  Widget _buildProfileButton() {
+    return Container(
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+      child: CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(widget.video.authorUrl),
+        backgroundColor: Colors.grey[800],
+      ),
+    );
+  }
+
   Widget _buildActionButton(
     IconData icon,
     String label,
@@ -370,10 +494,10 @@ class _VideoPostState extends State<VideoPost> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withOpacity(0.4),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 32),
+            child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 4),
           Text(
@@ -381,6 +505,7 @@ class _VideoPostState extends State<VideoPost> {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
+              fontSize: 12,
             ),
           ),
         ],

@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/features/auth/presentation/controllers/auth_controller.dart';
 import 'src/features/feed/presentation/views/feed_view.dart';
 
+import 'src/core/utils/navigation.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -28,6 +30,7 @@ class MyApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'PandaScroll',
       theme: AppTheme.lightTheme,
       home: authState.when(

@@ -1,108 +1,125 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/video_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../domain/models/video_model.dart';
 
 class CaptionsOverlay extends StatelessWidget {
-  final VideoModel video;
-  final double currentTime;
-
+  final ValueNotifier<double> currentTimeNotifier;
+  final List<Caption> captions;
+  final List<String> translations;
   final Function(String) onWordTap;
 
   const CaptionsOverlay({
     super.key,
-    required this.video,
-    required this.currentTime,
+    required this.currentTimeNotifier,
+    required this.captions,
+    this.translations = const [],
     required this.onWordTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Local timer is used now, so we use currentTime directly
-    final adjustedTime = currentTime;
+    return ValueListenableBuilder<double>(
+      valueListenable: currentTimeNotifier,
+      builder: (context, currentTime, child) {
+        final activeIndex = _findActiveCaptionIndex(currentTime);
 
-    // Find the current or most recent caption
-    Caption? currentCaption;
-    int currentIndex = -1;
+        if (activeIndex == null) {
+          return const SizedBox.shrink();
+        }
 
-    for (int i = 0; i < video.captions.length; i++) {
-      final caption = video.captions[i];
+        final currentCaption = captions[activeIndex];
+        final currentTranslation = (activeIndex < translations.length)
+            ? translations[activeIndex]
+            : '';
+
+        print(currentTranslation);
+        print(translations);
+
+        final highlightedIndex = _findHighlightedWordIndex(
+          currentCaption,
+          currentTime,
+        );
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Original Text with Highlighting
+              Wrap(
+                alignment: WrapAlignment.start,
+                spacing: 2,
+                children: currentCaption.words.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final word = entry.value;
+                  final isHighlighted = index == highlightedIndex;
+
+                  return GestureDetector(
+                    onTap: () => onWordTap(word.word),
+                    child: Text(
+                      word.word,
+                      style: TextStyle(
+                        color: isHighlighted
+                            ? AppColors.primaryBrand
+                            : Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 4,
+                            color: Colors.black.withOpacity(0.5),
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              if (currentTranslation.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                // Translation
+                Text(
+                  currentTranslation,
+                  textAlign: TextAlign.start,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  int? _findActiveCaptionIndex(double currentTime) {
+    for (int i = 0; i < captions.length; i++) {
+      final caption = captions[i];
       if (caption.words.isEmpty) continue;
-
       final start = caption.words.first.start;
+      final end = caption.words.last.end;
 
-      // If the caption has started, it's a candidate.
-      // Since we iterate in order, the last one we find that satisfies this
-      // will be the most recent one.
-      if (adjustedTime >= start) {
-        currentCaption = caption;
-        currentIndex = i;
-      } else {
-        // Assuming captions are sorted by time, we can stop once we hit a future caption
-        break;
+      // Add a small buffer to end time to prevent flickering between captions
+      if (currentTime >= start && currentTime < end) {
+        return i;
       }
     }
+    return null;
+  }
 
-    if (currentCaption == null) {
-      return const SizedBox.shrink();
+  int? _findHighlightedWordIndex(Caption caption, double currentTime) {
+    for (int i = 0; i < caption.words.length; i++) {
+      final word = caption.words[i];
+      if (currentTime >= word.start && currentTime <= word.end) {
+        return i;
+      }
     }
-
-    final translation =
-        (currentIndex >= 0 && currentIndex < video.translations.length)
-        ? video.translations[currentIndex]
-        : '';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Original Text with Highlighting
-          Wrap(
-            alignment: WrapAlignment.start,
-            spacing: 2,
-
-            children: currentCaption.words.map((word) {
-              final isHighlighted =
-                  adjustedTime >= word.start && adjustedTime <= word.end;
-              return GestureDetector(
-                onTap: () => onWordTap(word.word),
-                child: Text(
-                  word.word,
-                  style: TextStyle(
-                    color: isHighlighted
-                        ? AppColors.primaryBrand
-                        : Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 4,
-                        color: Colors.black.withOpacity(0.5),
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-
-          if (translation.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            // Translation
-            Text(
-              translation,
-              textAlign: TextAlign.start,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ],
-        ],
-      ),
-    );
+    return null;
   }
 }

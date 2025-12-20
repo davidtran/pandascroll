@@ -18,7 +18,9 @@ class InteractionPanel extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.card),
+        ),
       ),
       child: Column(
         children: [
@@ -34,7 +36,7 @@ class InteractionPanel extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -43,7 +45,7 @@ class InteractionPanel extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -55,11 +57,9 @@ class InteractionPanel extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-          
+
           // Content
-          Expanded(
-            child: child,
-          ),
+          Expanded(child: child),
         ],
       ),
     );

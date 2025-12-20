@@ -62,8 +62,9 @@ class VideoModel {
 class Caption {
   final String text;
   final List<Word> words;
+  final String translation;
 
-  Caption({required this.text, required this.words});
+  Caption({required this.text, required this.words, this.translation = ''});
 
   factory Caption.fromJson(Map<String, dynamic> json) {
     return Caption(
@@ -71,6 +72,7 @@ class Caption {
       words: (json['words'] as List)
           .map((e) => Word.fromJson(e as Map<String, dynamic>))
           .toList(),
+      translation: json['translation'] as String? ?? '',
     );
   }
 }

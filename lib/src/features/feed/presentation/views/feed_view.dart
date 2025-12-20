@@ -109,8 +109,13 @@ class _FeedViewState extends ConsumerState<FeedView> {
                 video: videos[index],
                 isPlaying: index == currentIndex && !_isPanelOpen,
                 hideContent: _isPanelOpen,
-                onStartQuiz: () =>
-                    _openPanel("Quiz Time! 🎮", const QuizPanel()),
+                onStartQuiz: () => _openPanel(
+                      "Quiz Time! 🎮",
+                      QuizPanel(
+                        videoId: videos[index].id,
+                        audioUrl: videos[index].audioUrl,
+                      ),
+                    ),
                 onShowComments: () =>
                     _openPanel("Comments 💬", const CommentsPanel()),
                 onShowPanel: (title, content) => _openPanel(title, content),
@@ -143,8 +148,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
             right: 0,
             bottom: _isPanelOpen
                 ? 0
-                : -MediaQuery.of(context).size.height * 0.65,
-            height: MediaQuery.of(context).size.height * 0.65,
+                : -MediaQuery.of(context).size.height * 0.75,
+            height: MediaQuery.of(context).size.height * 0.75,
             child: InteractionPanel(
               title: _panelTitle,
               onClose: _closePanel,

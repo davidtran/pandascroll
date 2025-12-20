@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:http_parser/http_parser.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/navigation.dart';
 import '../../features/auth/presentation/views/login_view.dart';
 
 class ApiClient {
   static const String _baseUrl = 'https://api-panda.studyfoc.us';
+  static String get baseUrl => _baseUrl;
 
   static Future<Map<String, dynamic>> get(String endpoint) async {
     final token = _getToken();
@@ -44,6 +47,38 @@ class ApiClient {
       },
       body: jsonEncode(body),
     );
+
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> upload(
+    String endpoint, {
+    required String filePath,
+    required String fieldName,
+    String? contentType,
+  }) async {
+    final token = _getToken();
+    if (token == null) {
+      _redirectToLogin();
+      throw Exception('User not authenticated');
+    }
+
+    final url = Uri.parse('$_baseUrl$endpoint');
+    final request = http.MultipartRequest('POST', url);
+
+    request.headers['Authorization'] = 'Bearer $token';
+
+    final file = File(filePath);
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        fieldName,
+        file.path,
+        contentType: contentType != null ? MediaType.parse(contentType) : null,
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     return _handleResponse(response);
   }

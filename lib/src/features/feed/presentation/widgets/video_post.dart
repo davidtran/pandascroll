@@ -1,19 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pandascroll/src/features/feed/presentation/widgets/progress_bar_painter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/video_model.dart';
 import '../../domain/models/dictionary_model.dart';
 import 'captions_overlay.dart';
 import 'dictionary_panel.dart';
 
-class VideoPost extends StatefulWidget {
+class VideoPost extends ConsumerStatefulWidget {
   final VideoModel video;
   final bool isPlaying;
   final bool hideContent;
@@ -32,33 +34,22 @@ class VideoPost extends StatefulWidget {
   });
 
   @override
-  State<VideoPost> createState() => _VideoPostState();
+  ConsumerState<VideoPost> createState() => _VideoPostState();
 }
 
-class _VideoPostState extends State<VideoPost>
-    with SingleTickerProviderStateMixin {
+class _VideoPostState extends ConsumerState<VideoPost> {
   late WebViewController _controller;
   bool _isInitialized = false;
   bool _isLoading = false;
   bool _isPaused = false;
-  double _currentTime = 0.0;
 
-  late Ticker _ticker;
-
-  Duration _lastElapsed = Duration.zero;
+  // Notifiers for UI updates
+  final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
 
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker((elapsed) {
-      if (mounted) {
-        setState(() {
-          final delta = (elapsed - _lastElapsed).inMilliseconds / 1000.0;
-          _currentTime += delta;
-          _lastElapsed = elapsed;
-        });
-      }
-    });
+    // No Ticker initialization needed anymore
   }
 
   @override
@@ -72,34 +63,13 @@ class _VideoPostState extends State<VideoPost>
 
   @override
   void dispose() {
-    _ticker.dispose();
+    _currentTimeNotifier.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    _lastElapsed = Duration.zero;
-    if (!_ticker.isActive) {
-      _ticker.start();
-    }
-  }
-
-  void _stopTimer() {
-    _ticker.stop();
-  }
-
-  void _resetTimer() {
-    _stopTimer();
-    if (mounted) {
-      setState(() {
-        _currentTime = -1.0;
-      });
-    }
-  }
-
   void _handleWordTap(String word) async {
-    // Pause video immediately
     _sendMessage("pause");
-    _stopTimer();
+    // No need to stop timer manually, the WebView will stop sending time updates
     if (mounted) {
       setState(() {
         _isPaused = true;
@@ -107,15 +77,12 @@ class _VideoPostState extends State<VideoPost>
     }
 
     try {
-      // Show loading panel
       widget.onShowPanel(
         "Loading...",
         const Center(
           child: CircularProgressIndicator(color: AppColors.primaryBrand),
         ),
       );
-
-      print('Look up word: $word');
 
       final data = await ApiClient.post('/dictionary', body: {'word': word});
       final dictionaryData = DictionaryModel.fromJson(data['data'][0]);
@@ -127,7 +94,6 @@ class _VideoPostState extends State<VideoPost>
         );
       }
     } catch (e) {
-      debugPrint("Error fetching dictionary data: $e");
       if (mounted) {
         widget.onShowPanel(
           "Error",
@@ -148,52 +114,25 @@ class _VideoPostState extends State<VideoPost>
     });
     if (_isPaused) {
       _sendMessage("pause");
-      _stopTimer();
     } else {
       _sendMessage("play");
-      // Timer will start via onStateChange
     }
   }
 
   void _initializeWebView() {
-    final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     const double iframeWidth = 4000;
-    final double iframeHeight = screenWidth * 16 / 9;
 
+    // UPDATED HTML: Listen for 'onCurrentTime' in the JS script
     final String htmlContent =
         '''
       <!DOCTYPE html>
       <html>
       <head>
-        
         <style>
-          body {
-            margin: 0;
-            padding: 0;
-            background-color: black;
-            display: flex;
-            justify-content: center;
-            padding-top: 0;
-            overflow: hidden;
-          }
-
-          .video-container {            
-            width: ${iframeWidth}px;
-            height: ${screenHeight}px; 
-            overflow: hidden;      
-            position: relative;       
-            background: black;            
-          }
-          iframe {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 4000px;
-            height: ${screenHeight}px;
-            border: none;
-          }
+          body { margin: 0; padding: 0; background-color: black; display: flex; justify-content: center; overflow: hidden; }
+          .video-container { width: ${iframeWidth}px; height: ${screenHeight}px; overflow: hidden; position: relative; background: black; }
+          iframe { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4000px; height: ${screenHeight}px; border: none; }
         </style>
       </head>
       <body>
@@ -203,25 +142,24 @@ class _VideoPostState extends State<VideoPost>
           src="https://www.tiktok.com/player/v1/${widget.video.externalId}?music_info=1&description=1&controls=0&progress_bar=0&play_button=0&native_context_menu=0&closed_caption=0&rel=0&timestamp=0&autoplay=1&loop=1" 
           allow="autoplay">
         </iframe>
-        </div>
-        
-        <script>
-          window.addEventListener('message', function(event) {
-            if (event.origin === "https://www.tiktok.com") {
-              const data = event.data;
-              if (data && data.type === "onStateChange") {
-                 if (window.FlutterCaptions) {
-                   window.FlutterCaptions.postMessage(JSON.stringify(data));
-                 }
-              }
+      </div>
+      <script>
+        window.addEventListener('message', function(event) {
+          if (event.origin === "https://www.tiktok.com") {
+            const data = event.data;
+            // Forward State Changes OR Time Updates
+            if (data && (data.type === "onStateChange" || data.type === "onCurrentTime")) {
+               if (window.FlutterCaptions) {
+                 window.FlutterCaptions.postMessage(JSON.stringify(data));
+               }
             }
-          });
-        </script>
+          }
+        });
+      </script>
       </body>
       </html>
     ''';
 
-    // Platform-specific creation params
     late final PlatformWebViewControllerCreationParams params;
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
       params = WebKitWebViewControllerCreationParams(
@@ -244,33 +182,35 @@ class _VideoPostState extends State<VideoPost>
         onMessageReceived: (JavaScriptMessage message) {
           try {
             final data = jsonDecode(message.message);
+            final type = data['type'];
 
-            if (data['type'] == 'onStateChange') {
+            // 1. Handle Time Updates directly from WebView
+            if (type == 'onCurrentTime') {
+              double newTime = 0.0;
+              final value = data['value'];
+              if (value is num) {
+                newTime = value.toDouble();
+              } else if (value is Map) {
+                // Handle case where value is an object {currentTime: 1.23}
+                newTime = (value['currentTime'] as num? ?? 0.0).toDouble();
+              }
+              _currentTimeNotifier.value = newTime;
+            }
+            // 2. Handle State Changes (Play/Pause/Ended)
+            else if (type == 'onStateChange') {
               final state = data['value'] as int?;
               // 1: playing, 2: paused, 0: ended
               if (state == 1) {
-                _startTimer();
-                // Ensure UI reflects playing state if it was triggered externally
-                if (_isPaused && mounted) {
-                  setState(() {
-                    _isPaused = false;
-                  });
-                }
+                if (_isPaused && mounted) setState(() => _isPaused = false);
               } else if (state == 2) {
-                _stopTimer();
-                // Ensure UI reflects paused state
-                if (!_isPaused && mounted) {
-                  setState(() {
-                    _isPaused = true;
-                  });
-                }
+                if (!_isPaused && mounted) setState(() => _isPaused = true);
               } else if (state == 0) {
-                _resetTimer();
+                // Video ended/looped, reset UI if needed
+                _currentTimeNotifier.value = 0.0;
               }
             }
           } catch (e) {
             debugPrint('Error parsing JS message: $e');
-            debugPrint('Raw message: ${message.message}');
           }
         },
       )
@@ -282,14 +222,12 @@ class _VideoPostState extends State<VideoPost>
               setState(() {
                 _isInitialized = true;
               });
-              // Apply initial state after a short delay to allow iframe to load
               Future.delayed(const Duration(milliseconds: 500), _applyState);
             }
           },
         ),
       );
 
-    // Android-specific configuration
     if (controller.platform is AndroidWebViewController) {
       (controller.platform as AndroidWebViewController)
           .setMediaPlaybackRequiresUserGesture(false);
@@ -307,33 +245,24 @@ class _VideoPostState extends State<VideoPost>
     if (widget.video.url != oldWidget.video.url) {
       _handleVideoChanged();
     }
-    // If panel state changed (hideContent), pause/resume video
     if (widget.hideContent != oldWidget.hideContent) {
       if (widget.hideContent) {
-        // Panel is open, pause video
         _sendMessage("pause");
-        _stopTimer();
-        setState(() {
-          _isPaused = true;
-        });
+        setState(() => _isPaused = true);
       } else if (widget.isPlaying) {
-        // Panel closed and this video is active, resume
         _sendMessage("play");
-        setState(() {
-          _isPaused = false;
-        });
-        // Timer will start via onStateChange
+        setState(() => _isPaused = false);
       }
     }
   }
 
   void _handleVideoChanged() {
-    _resetTimer();
     setState(() {
-      _currentTime = 0.0;
+      _currentTimeNotifier.value = 0.0;
       _isInitialized = false;
       _isPaused = false;
     });
+    // Reset captions
   }
 
   void _applyState() {
@@ -343,16 +272,11 @@ class _VideoPostState extends State<VideoPost>
       _sendMessage("seekTo", value: 0);
       _sendMessage("play");
       _sendMessage("unMute");
-      // Reset timer when re-playing from start (implied by seekTo 0)
-      if (mounted) {
-        setState(() {
-          _currentTime = 0.0;
-          _isPaused = false;
-        });
-      }
+      _currentTimeNotifier.value = 0.0;
+      if (mounted) setState(() => _isPaused = false);
     } else {
       _sendMessage("mute");
-      _sendMessage("play"); // Keep playing but muted (preloading)
+      _sendMessage("play");
     }
   }
 
@@ -368,23 +292,16 @@ class _VideoPostState extends State<VideoPost>
 
   @override
   Widget build(BuildContext context) {
-    final progress = widget.video.durationSeconds > 0
-        ? (_currentTime / widget.video.durationSeconds).clamp(0.0, 1.0)
-        : 0.0;
+    final showCaptions = ref.watch(settingsProvider);
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // WebView Layer
         WebViewWidget(controller: _controller),
-
-        // Loading Indicator
         if (!_isInitialized)
           const Center(
             child: CircularProgressIndicator(color: AppColors.primaryBrand),
           ),
-
-        // Gradient Overlay & Tap Detector
         GestureDetector(
           onTap: _togglePlayPause,
           child: Container(
@@ -401,28 +318,27 @@ class _VideoPostState extends State<VideoPost>
             ),
           ),
         ),
-
-        // Play Icon (Centered)
         if (_isPaused)
           Center(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 64,
+            child: GestureDetector(
+              onTap: _togglePlayPause,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 64,
+                ),
               ),
             ),
           ),
-
-        // Right Side Actions
         Positioned(
           right: AppSpacing.md,
-          bottom: 120, // Adjusted for progress bar and button
+          bottom: 120,
           child: Column(
             children: [
               _buildProfileButton(),
@@ -437,68 +353,50 @@ class _VideoPostState extends State<VideoPost>
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildActionButton(
-                Icons.closed_caption,
+                showCaptions
+                    ? Icons.closed_caption
+                    : Icons.closed_caption_disabled,
                 "Captions",
                 Colors.white,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).toggleCaptions();
+                },
               ),
             ],
           ),
         ),
-
-        // Left Side Content (Captions & Title)
-        Positioned(
-          left: AppSpacing.md,
-          right: 80, // Space for right actions
-          bottom: 120,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Captions Overlay
-              CaptionsOverlay(
-                video: widget.video,
-                currentTime: _currentTime,
+        if (showCaptions)
+          Positioned(
+            left: AppSpacing.md,
+            right: 80,
+            bottom: 120,
+            child: RepaintBoundary(
+              child: CaptionsOverlay(
+                currentTimeNotifier: _currentTimeNotifier,
+                captions: widget.video.captions,
                 onWordTap: _handleWordTap,
+                translations: widget.video.translations,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              // Title / Description
-              Text(
-                widget.video.description, // Using description as title for now
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    const Shadow(
-                      blurRadius: 4,
-                      color: Colors.black45,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            ),
           ),
-        ),
-
-        // Progress Bar
         Positioned(
           left: AppSpacing.md,
           right: AppSpacing.md,
           bottom: 100,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white24,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              minHeight: 4,
+          child: RepaintBoundary(
+            child: SizedBox(
+              height: 4,
+              child: CustomPaint(
+                painter: ProgressBarPainter(
+                  timeNotifier: _currentTimeNotifier,
+                  totalDuration: widget.video.durationSeconds.toDouble(),
+                  backgroundColor: Colors.white24,
+                  progressColor: Colors.white,
+                ),
+              ),
             ),
           ),
         ),
-
-        // Start Quiz Button
         Positioned(
           bottom: AppSpacing.lg,
           left: AppSpacing.lg,

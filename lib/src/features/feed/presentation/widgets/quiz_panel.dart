@@ -32,6 +32,7 @@ class _QuizPanelState extends State<QuizPanel> {
   List<ExerciseModel> _exercises = [];
   int _currentIndex = 0;
   bool _isCompleted = false;
+  String firstTitle = "";
 
   @override
   void initState() {
@@ -51,6 +52,14 @@ class _QuizPanelState extends State<QuizPanel> {
         _error = null;
       });
       _fetchExercises();
+    } else {
+      if (!_isLoading && _exercises.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (firstTitle != "") {
+            widget.onTitleChanged?.call(firstTitle);
+          }
+        });
+      }
     }
   }
 
@@ -66,9 +75,10 @@ class _QuizPanelState extends State<QuizPanel> {
           _exercises = data.map((e) => ExerciseModel.fromJson(e)).toList();
           _isLoading = false;
         });
+        print(_exercises);
         if (_exercises.isNotEmpty) {
-          final firstTitle = _getExerciseTitle(_exercises[0]);
-          if (firstTitle != null) {
+          firstTitle = _getExerciseTitle(_exercises[0]) ?? "";
+          if (firstTitle != "") {
             widget.onTitleChanged?.call(firstTitle);
           }
         }
@@ -258,6 +268,10 @@ class _QuizPanelState extends State<QuizPanel> {
                 _currentIndex = 0;
                 _isCompleted = false;
               });
+              print(firstTitle);
+              if (firstTitle.isNotEmpty) {
+                widget.onTitleChanged?.call(firstTitle);
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBrand,

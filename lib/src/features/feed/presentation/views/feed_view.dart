@@ -35,13 +35,19 @@ class _FeedViewState extends ConsumerState<FeedView> {
     });
   }
 
+  void _updateTitle(String title) {
+    setState(() {
+      _panelTitle = title;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final videoState = ref.watch(videoFeedProvider);
-    final videos = videoState.videos;
-    final currentIndex = videoState.currentIndex;
+    // OPTIMIZATION 1: Only watch the loading/error state for the root scaffold
+    final isLoading = ref.watch(videoFeedProvider.select((s) => s.isLoading));
+    final error = ref.watch(videoFeedProvider.select((s) => s.error));
 
-    if (videoState.isLoading) {
+    if (isLoading) {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -50,46 +56,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
       );
     }
 
-    if (videoState.error != null) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                'Oops! Something went wrong.',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  videoState.error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.read(videoFeedProvider.notifier).fetchVideos();
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBrand,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+    if (error != null) {
+      return _buildErrorView(error);
     }
 
     return Scaffold(
@@ -97,50 +65,21 @@ class _FeedViewState extends ConsumerState<FeedView> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // Video PageView
-          PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: videos.length,
-            onPageChanged: ref.read(videoFeedProvider.notifier).onPageChanged,
-            itemBuilder: (context, index) {
-              return VideoPost(
-                video: videos[index],
-                isPlaying: index == currentIndex && !_isPanelOpen,
-                hideContent: _isPanelOpen,
-                onStartQuiz: () => _openPanel(
-                  "Loading...", // Initial title while loading
-                  QuizPanel(
-                    videoId: videos[index].id,
-                    audioUrl: videos[index].audioUrl,
-                    onTitleChanged: (newTitle) {
-                      print(newTitle);
-                      setState(() => _panelTitle = newTitle);
-                    },
-                  ),
-                ),
-                onShowComments: () =>
-                    _openPanel("Comments 💬", const CommentsPanel()),
-                onShowPanel: (title, content) => _openPanel(title, content),
-              );
-            },
+          // OPTIMIZATION 2: Extract PageView to a separate widget
+          // so it handles its own index watching without rebuilding the panel/tabs
+          _VideoPageFeed(
+            pageController: _pageController,
+            isPanelOpen: _isPanelOpen,
+            onOpenPanel: _openPanel,
+            onUpdateTitle: _updateTitle,
           ),
 
-          // Top Tabs (Learn | Feed)
+          // Top Tabs
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTabItem("Learn", false),
-                const SizedBox(width: 20),
-                Container(width: 1, height: 16, color: Colors.white24),
-                const SizedBox(width: 20),
-                _buildTabItem("Feed", true),
-              ],
-            ),
+            child: const _TopTabs(),
           ),
 
           // Interaction Panel (Animated)
@@ -161,6 +100,118 @@ class _FeedViewState extends ConsumerState<FeedView> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildErrorView(String error) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Oops! Something went wrong.',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                error,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                ref.read(videoFeedProvider.notifier).fetchVideos();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBrand,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoPageFeed extends ConsumerWidget {
+  final PageController pageController;
+  final bool isPanelOpen;
+  final Function(String, Widget) onOpenPanel;
+  final Function(String) onUpdateTitle;
+
+  const _VideoPageFeed({
+    required this.pageController,
+    required this.isPanelOpen,
+    required this.onOpenPanel,
+    required this.onUpdateTitle,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // OPTIMIZATION 3: Select specifically what we need.
+    final videos = ref.watch(videoFeedProvider.select((s) => s.videos));
+    final currentIndex = ref.watch(
+      videoFeedProvider.select((s) => s.currentIndex),
+    );
+
+    return PageView.builder(
+      controller: pageController,
+      scrollDirection: Axis.vertical,
+      itemCount: videos.length,
+      // Use allowImplicitScrolling to keep previous/next video ready in memory
+      allowImplicitScrolling: true,
+      onPageChanged: (index) {
+        ref.read(videoFeedProvider.notifier).onPageChanged(index);
+      },
+      itemBuilder: (context, index) {
+        return VideoPost(
+          video: videos[index],
+          isPlaying: index == currentIndex && !isPanelOpen,
+          hideContent: isPanelOpen,
+          onStartQuiz: () => onOpenPanel(
+            "Loading...",
+            QuizPanel(
+              videoId: videos[index].id,
+              audioUrl: videos[index].audioUrl,
+              onTitleChanged: onUpdateTitle,
+            ),
+          ),
+          onShowComments: () =>
+              onOpenPanel("Comments 💬", const CommentsPanel()),
+          onShowPanel: onOpenPanel,
+        );
+      },
+    );
+  }
+}
+
+class _TopTabs extends StatelessWidget {
+  const _TopTabs();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildTabItem("Learn", false),
+        const SizedBox(width: 20),
+        Container(width: 1, height: 16, color: Colors.white24),
+        const SizedBox(width: 20),
+        _buildTabItem("Feed", true),
+      ],
     );
   }
 

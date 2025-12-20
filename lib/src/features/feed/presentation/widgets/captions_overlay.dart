@@ -32,9 +32,6 @@ class CaptionsOverlay extends StatelessWidget {
             ? translations[activeIndex]
             : '';
 
-        print(currentTranslation);
-        print(translations);
-
         final highlightedIndex = _findHighlightedWordIndex(
           currentCaption,
           currentTime,

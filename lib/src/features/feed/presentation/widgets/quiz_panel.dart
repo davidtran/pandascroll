@@ -13,8 +13,14 @@ import 'quiz/parrot_widget.dart';
 class QuizPanel extends StatefulWidget {
   final String videoId;
   final String audioUrl;
+  final Function(String title)? onTitleChanged;
 
-  const QuizPanel({super.key, required this.videoId, required this.audioUrl});
+  const QuizPanel({
+    super.key,
+    required this.videoId,
+    required this.audioUrl,
+    this.onTitleChanged,
+  });
 
   @override
   State<QuizPanel> createState() => _QuizPanelState();
@@ -60,6 +66,12 @@ class _QuizPanelState extends State<QuizPanel> {
           _exercises = data.map((e) => ExerciseModel.fromJson(e)).toList();
           _isLoading = false;
         });
+        if (_exercises.isNotEmpty) {
+          final firstTitle = _getExerciseTitle(_exercises[0]);
+          if (firstTitle != null) {
+            widget.onTitleChanged?.call(firstTitle);
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -76,10 +88,15 @@ class _QuizPanelState extends State<QuizPanel> {
       setState(() {
         _currentIndex++;
       });
+      final title = _getExerciseTitle(_exercises[_currentIndex]);
+      if (title != null) {
+        widget.onTitleChanged?.call(title);
+      }
     } else {
       setState(() {
         _isCompleted = true;
       });
+      widget.onTitleChanged?.call("Level Complete! 🎉");
     }
   }
 
@@ -88,10 +105,18 @@ class _QuizPanelState extends State<QuizPanel> {
       setState(() {
         _isCompleted = false;
       });
+      final title = _getExerciseTitle(_exercises[_currentIndex]);
+      if (title != null) {
+        widget.onTitleChanged?.call(title);
+      }
     } else if (_currentIndex > 0) {
       setState(() {
         _currentIndex--;
       });
+      final title = _getExerciseTitle(_exercises[_currentIndex]);
+      if (title != null) {
+        widget.onTitleChanged?.call(title);
+      }
     }
   }
 
@@ -153,7 +178,7 @@ class _QuizPanelState extends State<QuizPanel> {
 
         // Header with Navigation
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.only(top: AppSpacing.md),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -161,10 +186,11 @@ class _QuizPanelState extends State<QuizPanel> {
                 onPressed: _currentIndex > 0 ? _previousExercise : null,
                 icon: const Icon(Icons.arrow_back_ios_rounded),
                 color: AppColors.textMain,
+                iconSize: 16,
               ),
               Text(
                 "Question ${_currentIndex + 1}/${_exercises.length}",
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.textMain,
                 ),
@@ -173,24 +199,13 @@ class _QuizPanelState extends State<QuizPanel> {
                 onPressed: _nextExercise,
                 icon: const Icon(Icons.arrow_forward_ios_rounded),
                 color: AppColors.textMain,
+                iconSize: 16,
               ),
             ],
           ),
         ),
 
-        // Exercise Title
-        if (_getExerciseTitle(currentExercise) != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Text(
-              _getExerciseTitle(currentExercise)!,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMain,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
+        // REMOVED Redundant Exercise Title (now in Panel Header)
 
         // Exercise Content
         Expanded(

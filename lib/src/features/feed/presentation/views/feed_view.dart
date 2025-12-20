@@ -61,10 +61,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
               const SizedBox(height: 16),
               Text(
                 'Oops! Something went wrong.',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: Colors.white),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: Colors.white),
               ),
               const SizedBox(height: 8),
               Padding(
@@ -110,12 +109,16 @@ class _FeedViewState extends ConsumerState<FeedView> {
                 isPlaying: index == currentIndex && !_isPanelOpen,
                 hideContent: _isPanelOpen,
                 onStartQuiz: () => _openPanel(
-                      "Quiz Time! 🎮",
-                      QuizPanel(
-                        videoId: videos[index].id,
-                        audioUrl: videos[index].audioUrl,
-                      ),
-                    ),
+                  "Loading...", // Initial title while loading
+                  QuizPanel(
+                    videoId: videos[index].id,
+                    audioUrl: videos[index].audioUrl,
+                    onTitleChanged: (newTitle) {
+                      print(newTitle);
+                      setState(() => _panelTitle = newTitle);
+                    },
+                  ),
+                ),
                 onShowComments: () =>
                     _openPanel("Comments 💬", const CommentsPanel()),
                 onShowPanel: (title, content) => _openPanel(title, content),
@@ -169,11 +172,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
         fontSize: 18,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
         shadows: const [
-          Shadow(
-            blurRadius: 4,
-            color: Colors.black26,
-            offset: Offset(0, 1),
-          ),
+          Shadow(blurRadius: 4, color: Colors.black26, offset: Offset(0, 1)),
         ],
       ),
     );

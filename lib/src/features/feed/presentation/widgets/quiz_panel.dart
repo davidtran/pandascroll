@@ -33,6 +33,7 @@ class _QuizPanelState extends State<QuizPanel> {
   int _currentIndex = 0;
   bool _isCompleted = false;
   String firstTitle = "";
+  int _correctCount = 0;
 
   @override
   void initState() {
@@ -50,6 +51,7 @@ class _QuizPanelState extends State<QuizPanel> {
         _exercises = [];
         _isLoading = true;
         _error = null;
+        _correctCount = 0;
       });
       _fetchExercises();
     } else {
@@ -93,6 +95,13 @@ class _QuizPanelState extends State<QuizPanel> {
     }
   }
 
+  void _handleAnswer(bool isCorrect) {
+    if (isCorrect) {
+      _correctCount++;
+    }
+    _nextExercise();
+  }
+
   void _nextExercise() {
     if (_currentIndex < _exercises.length - 1) {
       setState(() {
@@ -120,6 +129,9 @@ class _QuizPanelState extends State<QuizPanel> {
         widget.onTitleChanged?.call(title);
       }
     } else if (_currentIndex > 0) {
+      // NOTE: Moving back does not decrement score to keep things simple,
+      // or we could implementing logic to undo the score if re-attempting is allowed.
+      // For now, simple navigation.
       setState(() {
         _currentIndex--;
       });
@@ -206,7 +218,8 @@ class _QuizPanelState extends State<QuizPanel> {
                 ),
               ),
               IconButton(
-                onPressed: _nextExercise,
+                onPressed:
+                    _nextExercise, // Only navigation, score Logic handled in content
                 icon: const Icon(Icons.arrow_forward_ios_rounded),
                 color: AppColors.textMain,
                 iconSize: 16,
@@ -214,8 +227,6 @@ class _QuizPanelState extends State<QuizPanel> {
             ],
           ),
         ),
-
-        // REMOVED Redundant Exercise Title (now in Panel Header)
 
         // Exercise Content
         Expanded(
@@ -225,7 +236,22 @@ class _QuizPanelState extends State<QuizPanel> {
                 hasScrollBody: false,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: _buildExerciseContent(currentExercise),
+                  child: Column(
+                    children: [
+                      Expanded(child: _buildExerciseContent(currentExercise)),
+                      const SizedBox(height: AppSpacing.md),
+                      TextButton(
+                        onPressed: () => _handleAnswer(false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey,
+                        ),
+                        child: const Text(
+                          "Skip Question",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -236,6 +262,10 @@ class _QuizPanelState extends State<QuizPanel> {
   }
 
   Widget _buildCompletionScreen() {
+    final percentage = _exercises.isNotEmpty
+        ? (_correctCount / _exercises.length * 100).round()
+        : 0;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -255,7 +285,7 @@ class _QuizPanelState extends State<QuizPanel> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            "You have completed 100% of the exercises.",
+            "You answered $_correctCount/${_exercises.length} correctly ($percentage%).",
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
@@ -267,6 +297,7 @@ class _QuizPanelState extends State<QuizPanel> {
               setState(() {
                 _currentIndex = 0;
                 _isCompleted = false;
+                _correctCount = 0;
               });
               print(firstTitle);
               if (firstTitle.isNotEmpty) {
@@ -301,29 +332,29 @@ class _QuizPanelState extends State<QuizPanel> {
       case 'word_quiz':
         return WordQuizWidget(
           data: WordQuizData.fromJson(exercise.data),
-          onCorrect: _nextExercise,
+          onCorrect: () => _handleAnswer(true),
         );
       case 'scramble':
         return ScrambleWidget(
           data: ScrambleData.fromJson(exercise.data),
-          onCorrect: _nextExercise,
+          onCorrect: () => _handleAnswer(true),
           audioUrl: widget.audioUrl,
         );
       case 'video_understanding':
         return VideoUnderstandingWidget(
           data: VideoUnderstandingData.fromJson(exercise.data),
-          onCorrect: _nextExercise,
+          onCorrect: () => _handleAnswer(true),
         );
       case 'cloze':
         return ClozeWidget(
           data: ClozeData.fromJson(exercise.data),
-          onCorrect: _nextExercise,
+          onCorrect: () => _handleAnswer(true),
           audioUrl: widget.audioUrl,
         );
       case 'parrot':
         return ParrotWidget(
           data: ParrotData.fromJson(exercise.data),
-          onCorrect: _nextExercise,
+          onCorrect: () => _handleAnswer(true),
           audioUrl: widget.audioUrl,
         );
       default:

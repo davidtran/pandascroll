@@ -18,78 +18,25 @@ class CaptionsOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // We only want to rebuild the main container when the CAPTION index changes,
+    // not every time the time updates.
     return ValueListenableBuilder<double>(
       valueListenable: currentTimeNotifier,
       builder: (context, currentTime, child) {
         final activeIndex = _findActiveCaptionIndex(currentTime);
-
-        if (activeIndex == null) {
-          return const SizedBox.shrink();
-        }
+        if (activeIndex == null) return const SizedBox.shrink();
 
         final currentCaption = captions[activeIndex];
         final currentTranslation = (activeIndex < translations.length)
             ? translations[activeIndex]
             : '';
 
-        final highlightedIndex = _findHighlightedWordIndex(
-          currentCaption,
-          currentTime,
-        );
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Original Text with Highlighting
-              Wrap(
-                alignment: WrapAlignment.start,
-                spacing: 2,
-                children: currentCaption.words.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final word = entry.value;
-                  final isHighlighted = index == highlightedIndex;
-
-                  return GestureDetector(
-                    onTap: () => onWordTap(word.word),
-                    child: Text(
-                      word.word,
-                      style: TextStyle(
-                        color: isHighlighted
-                            ? AppColors.primaryBrand
-                            : Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 4,
-                            color: Colors.black.withOpacity(0.5),
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-              if (currentTranslation.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                // Translation
-                Text(
-                  currentTranslation,
-                  textAlign: TextAlign.start,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
-            ],
-          ),
+        return _CaptionContainer(
+          key: ValueKey(activeIndex), // Ensure state resets for new captions
+          caption: currentCaption,
+          translation: currentTranslation,
+          currentTimeNotifier: currentTimeNotifier,
+          onWordTap: onWordTap,
         );
       },
     );
@@ -109,14 +56,96 @@ class CaptionsOverlay extends StatelessWidget {
     }
     return null;
   }
+}
 
-  int? _findHighlightedWordIndex(Caption caption, double currentTime) {
-    for (int i = 0; i < caption.words.length; i++) {
-      final word = caption.words[i];
-      if (currentTime >= word.start && currentTime <= word.end) {
-        return i;
-      }
-    }
-    return null;
+class _CaptionContainer extends StatelessWidget {
+  final Caption caption;
+  final String translation;
+  final ValueNotifier<double> currentTimeNotifier;
+  final Function(String) onWordTap;
+
+  const _CaptionContainer({
+    super.key,
+    required this.caption,
+    required this.translation,
+    required this.currentTimeNotifier,
+    required this.onWordTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.start,
+            spacing: 2,
+            children: caption.words.map((word) {
+              return _HighlightableWord(
+                word: word,
+                currentTimeNotifier: currentTimeNotifier,
+                onTap: () => onWordTap(word.word),
+              );
+            }).toList(),
+          ),
+          if (translation.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                translation,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HighlightableWord extends StatelessWidget {
+  final Word word;
+  final ValueNotifier<double> currentTimeNotifier;
+  final VoidCallback onTap;
+
+  const _HighlightableWord({
+    required this.word,
+    required this.currentTimeNotifier,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ValueListenableBuilder<double>(
+        valueListenable: currentTimeNotifier,
+        builder: (context, time, _) {
+          final isHighlighted = time >= word.start && time <= word.end;
+
+          return Text(
+            word.word,
+            style: TextStyle(
+              color: isHighlighted ? AppColors.primaryBrand : Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  blurRadius: 4,
+                  color: Colors.black.withOpacity(0.5),
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }

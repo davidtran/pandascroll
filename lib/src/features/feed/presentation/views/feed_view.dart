@@ -6,6 +6,7 @@ import '../widgets/interaction_panel.dart';
 import '../widgets/video_post.dart';
 import '../widgets/quiz_panel.dart';
 import '../widgets/comments_panel.dart';
+import 'package:pandascroll/src/features/roadmap/presentation/views/roadmap_view.dart';
 
 class FeedView extends ConsumerStatefulWidget {
   const FeedView({super.key});
@@ -19,6 +20,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
   bool _isPanelOpen = false;
   Widget _panelContent = const SizedBox();
   String _panelTitle = "";
+  String _currentTab = "Feed";
 
   void _openPanel(String title, Widget content) {
     setState(() {
@@ -67,19 +69,24 @@ class _FeedViewState extends ConsumerState<FeedView> {
         children: [
           // OPTIMIZATION 2: Extract PageView to a separate widget
           // so it handles its own index watching without rebuilding the panel/tabs
-          _VideoPageFeed(
-            pageController: _pageController,
-            isPanelOpen: _isPanelOpen,
-            onOpenPanel: _openPanel,
-            onUpdateTitle: _updateTitle,
-          ),
+          _currentTab == "Feed"
+              ? _VideoPageFeed(
+                  pageController: _pageController,
+                  isPanelOpen: _isPanelOpen,
+                  onOpenPanel: _openPanel,
+                  onUpdateTitle: _updateTitle,
+                )
+              : const RoadmapView(),
 
           // Top Tabs
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 0,
             right: 0,
-            child: const _TopTabs(),
+            child: _TopTabs(
+              selectedTab: _currentTab,
+              onTabSelected: (tab) => setState(() => _currentTab = tab),
+            ),
           ),
 
           // Interaction Panel (Animated)
@@ -199,18 +206,27 @@ class _VideoPageFeed extends ConsumerWidget {
 }
 
 class _TopTabs extends StatelessWidget {
-  const _TopTabs();
+  final String selectedTab;
+  final Function(String) onTabSelected;
+
+  const _TopTabs({required this.selectedTab, required this.onTabSelected});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildTabItem("Learn", false),
+        GestureDetector(
+          onTap: () => onTabSelected("Roadmap"),
+          child: _buildTabItem("Roadmap", selectedTab == "Roadmap"),
+        ),
         const SizedBox(width: 20),
         Container(width: 1, height: 16, color: Colors.white24),
         const SizedBox(width: 20),
-        _buildTabItem("Feed", true),
+        GestureDetector(
+          onTap: () => onTabSelected("Feed"),
+          child: _buildTabItem("Feed", selectedTab == "Feed"),
+        ),
       ],
     );
   }

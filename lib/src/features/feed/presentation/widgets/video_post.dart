@@ -40,8 +40,8 @@ class VideoPost extends ConsumerStatefulWidget {
 class _VideoPostState extends ConsumerState<VideoPost> {
   late WebViewController _controller;
   bool _isInitialized = false;
-  bool _isLoading = false;
   bool _isPaused = false;
+  Timer? _progressTimer;
 
   // Notifiers for UI updates
   final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
@@ -49,22 +49,26 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   @override
   void initState() {
     super.initState();
-    // No Ticker initialization needed anymore
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isLoading) {
-      _isLoading = true;
-      _initializeWebView();
-    }
+    _initializeWebView();
   }
 
   @override
   void dispose() {
+    _stopTimer();
     _currentTimeNotifier.dispose();
     super.dispose();
+  }
+
+  void _startTimer() {
+    _stopTimer();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      _currentTimeNotifier.value += 0.016;
+    });
+  }
+
+  void _stopTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
   }
 
   void _handleWordTap(String word) async {
@@ -120,19 +124,19 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   }
 
   void _initializeWebView() {
-    final double screenHeight = MediaQuery.of(context).size.height;
+    // ... existing iframe setup ...
     const double iframeWidth = 4000;
 
-    // UPDATED HTML: Listen for 'onCurrentTime' in the JS script
     final String htmlContent =
         '''
       <!DOCTYPE html>
       <html>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <style>
-          body { margin: 0; padding: 0; background-color: black; display: flex; justify-content: center; overflow: hidden; }
-          .video-container { width: ${iframeWidth}px; height: ${screenHeight}px; overflow: hidden; position: relative; background: black; }
-          iframe { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4000px; height: ${screenHeight}px; border: none; }
+          body { margin: 0; padding: 0; background-color: black; display: flex; justify-content: center; overflow: hidden; height: 100vh; }
+          .video-container { width: ${iframeWidth}px; height: 100vh; overflow: hidden; position: relative; background: black; }
+          iframe { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4000px; height: 100vh; border: none; }
         </style>
       </head>
       <body>
@@ -147,7 +151,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         window.addEventListener('message', function(event) {
           if (event.origin === "https://www.tiktok.com") {
             const data = event.data;
-            // Forward State Changes OR Time Updates
             if (data && (data.type === "onStateChange" || data.type === "onCurrentTime")) {
                if (window.FlutterCaptions) {
                  window.FlutterCaptions.postMessage(JSON.stringify(data));
@@ -159,7 +162,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       </body>
       </html>
     ''';
-
+    // ... params setup ...
     late final PlatformWebViewControllerCreationParams params;
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
       params = WebKitWebViewControllerCreationParams(
@@ -184,29 +187,30 @@ class _VideoPostState extends ConsumerState<VideoPost> {
             final data = jsonDecode(message.message);
             final type = data['type'];
 
-            // 1. Handle Time Updates directly from WebView
             if (type == 'onCurrentTime') {
               double newTime = 0.0;
               final value = data['value'];
               if (value is num) {
                 newTime = value.toDouble();
               } else if (value is Map) {
-                // Handle case where value is an object {currentTime: 1.23}
                 newTime = (value['currentTime'] as num? ?? 0.0).toDouble();
               }
+              // Sync timer to avoid drift
               _currentTimeNotifier.value = newTime;
-            }
-            // 2. Handle State Changes (Play/Pause/Ended)
-            else if (type == 'onStateChange') {
+            } else if (type == 'onStateChange') {
               final state = data['value'] as int?;
               // 1: playing, 2: paused, 0: ended
               if (state == 1) {
                 if (_isPaused && mounted) setState(() => _isPaused = false);
+                _startTimer();
               } else if (state == 2) {
                 if (!_isPaused && mounted) setState(() => _isPaused = true);
+                _stopTimer();
               } else if (state == 0) {
-                // Video ended/looped, reset UI if needed
                 _currentTimeNotifier.value = 0.0;
+                _stopTimer();
+                // Loop behavior - start again if needed or wait for play
+                _startTimer(); // TikTok player usually loops automatically
               }
             }
           } catch (e) {

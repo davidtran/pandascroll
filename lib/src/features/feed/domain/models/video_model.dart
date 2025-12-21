@@ -48,7 +48,7 @@ class VideoModel {
       authorName: json['author_name'] as String,
       authorUrl: json['author_url'] as String,
       thumbnailUrl: json['thumbnail_url'] as String,
-      externalId: json['external_id'] as String,
+      externalId: (json['external_id'] as String?) ?? "",
       audioUrl: json['audio_url'] as String,
       text: json['text'] as String,
       captions: (json['captions'] as List)

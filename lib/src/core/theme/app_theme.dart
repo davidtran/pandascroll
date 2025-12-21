@@ -6,9 +6,9 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Lato', // Your font
+      fontFamily: 'Nunito',
       scaffoldBackgroundColor: AppColors.background,
-      
+
       // Map our colors to Material Scheme
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primaryBrand,
@@ -25,18 +25,28 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(AppRadius.card)),
         ),
       ),
-      
+
       // Default Text Style overrides
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
-          fontSize: 32, 
-          fontWeight: FontWeight.bold, 
-          color: AppColors.textMain
+          fontFamily: 'Fredoka',
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textMain,
         ),
-        bodyMedium: TextStyle(
-          fontSize: 16, 
-          color: AppColors.textMain
+        titleLarge: TextStyle(
+          fontFamily: 'Fredoka',
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textMain,
         ),
+        titleMedium: TextStyle(
+          fontFamily: 'Fredoka',
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textMain,
+        ),
+        bodyMedium: TextStyle(fontSize: 16, color: AppColors.textMain),
       ),
     );
   }

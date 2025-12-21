@@ -86,7 +86,7 @@ class _CaptionContainer extends StatelessWidget {
         children: [
           Wrap(
             alignment: WrapAlignment.start,
-            spacing: 2,
+            spacing: 4,
             children: caption.words.map((word) {
               return _HighlightableWord(
                 word: word,

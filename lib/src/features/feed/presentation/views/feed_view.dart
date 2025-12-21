@@ -67,8 +67,6 @@ class _FeedViewState extends ConsumerState<FeedView> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // OPTIMIZATION 2: Extract PageView to a separate widget
-          // so it handles its own index watching without rebuilding the panel/tabs
           _currentTab == "Feed"
               ? _VideoPageFeed(
                   pageController: _pageController,
@@ -80,12 +78,21 @@ class _FeedViewState extends ConsumerState<FeedView> {
 
           // Top Tabs
           Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 0,
-            right: 0,
-            child: _TopTabs(
-              selectedTab: _currentTab,
-              onTabSelected: (tab) => setState(() => _currentTab = tab),
+            top: 0,
+            left: 24,
+            right: 24,
+            child: SafeArea(
+              child: Stack(
+                alignment: Alignment.topCenter,
+
+                children: [
+                  // Daily Goal (Left)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _buildDailyGoalBadge(),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -151,7 +158,106 @@ class _FeedViewState extends ConsumerState<FeedView> {
       ),
     );
   }
-}
+
+  Widget _buildDailyGoalBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white24),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Icon
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.pandaBlack, width: 2),
+            ),
+            child: const Center(
+              child: Icon(Icons.spa, color: AppColors.pandaBlack, size: 18),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Text + Progress
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text(
+                    "DAILY PANDA GOAL",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    "3 / 5",
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+
+              // Progress Bar
+              Container(
+                width: 120, // Fixed width for badge consistency
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.white24, width: 0.5),
+                ),
+                child: Stack(
+                  children: [
+                    // Fill
+                    FractionallySizedBox(
+                      widthFactor: 0.6, // 3/5
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accent.withOpacity(0.5),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+} // End class
 
 class _VideoPageFeed extends ConsumerWidget {
   final PageController pageController;
@@ -232,16 +338,41 @@ class _TopTabs extends StatelessWidget {
   }
 
   Widget _buildTabItem(String text, bool isSelected) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: isSelected ? Colors.white : Colors.white60,
-        fontSize: 18,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-        shadows: const [
-          Shadow(blurRadius: 4, color: Colors.black26, offset: Offset(0, 1)),
-        ],
-      ),
+    if (text == "Feed") text = "For You"; // Rename for display
+    if (text == "Roadmap") text = "Following";
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white60,
+            fontSize: isSelected ? 20 : 18,
+            fontWeight: FontWeight.w800,
+            shadows: const [
+              Shadow(blurRadius: 4, color: Colors.black, offset: Offset(0, 1)),
+            ],
+          ),
+        ),
+        if (isSelected)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            height: 3,
+            width: 20,
+            decoration: BoxDecoration(
+              color: AppColors.accent,
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

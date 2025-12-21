@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
-import '../../../feed/presentation/views/feed_view.dart';
+import '../../../onboarding/presentation/views/preferences_view.dart';
 import '../controllers/auth_controller.dart';
 
 class LoginView extends ConsumerWidget {
@@ -17,7 +17,7 @@ class LoginView extends ConsumerWidget {
       if (next.value == true) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const FeedView()),
+          MaterialPageRoute(builder: (context) => const PreferencesView()),
           (route) => false,
         );
       }
@@ -32,7 +32,7 @@ class LoginView extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
-              
+
               // Logo / Branding
               Container(
                 width: 120,
@@ -42,10 +42,7 @@ class LoginView extends ConsumerWidget {
                   color: Colors.white,
                 ),
                 child: const Center(
-                  child: Text(
-                    "🐼",
-                    style: TextStyle(fontSize: 64),
-                  ),
+                  child: Text("🐼", style: TextStyle(fontSize: 64)),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -59,12 +56,12 @@ class LoginView extends ConsumerWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 "Learn languages the fun way!",
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textLight,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppColors.textLight),
                 textAlign: TextAlign.center,
               ),
-              
+
               const Spacer(),
 
               if (authState.isLoading)
@@ -76,20 +73,22 @@ class LoginView extends ConsumerWidget {
                   icon: "🇬", // Placeholder for Google Icon
                   backgroundColor: Colors.white,
                   textColor: Colors.black,
-                  onPressed: () => ref.read(authProvider.notifier).signInWithGoogle(),
+                  onPressed: () =>
+                      ref.read(authProvider.notifier).signInWithGoogle(),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
+
                 // Apple Button
                 _SocialLoginButton(
                   text: "Continue with Apple",
                   icon: "",
                   backgroundColor: Colors.black,
                   textColor: Colors.white,
-                  onPressed: () => ref.read(authProvider.notifier).signInWithApple(),
+                  onPressed: () =>
+                      ref.read(authProvider.notifier).signInWithApple(),
                 ),
               ],
-              
+
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
@@ -127,18 +126,15 @@ class _SocialLoginButton extends StatelessWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),
-            side: backgroundColor == Colors.white 
-                ? const BorderSide(color: Color(0xFFE0E0E0)) 
+            side: backgroundColor == Colors.white
+                ? const BorderSide(color: Color(0xFFE0E0E0))
                 : BorderSide.none,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              icon,
-              style: TextStyle(fontSize: 24, color: textColor),
-            ),
+            Text(icon, style: TextStyle(fontSize: 24, color: textColor)),
             const SizedBox(width: AppSpacing.md),
             Text(
               text,

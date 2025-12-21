@@ -27,19 +27,11 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'PandaScroll',
       theme: AppTheme.lightTheme,
-      home: authState.when(
-        data: (isLoggedIn) =>
-            isLoggedIn ? const FeedView() : const LandingView(),
-        loading: () =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (err, stack) => const LandingView(),
-      ),
+      home: const LandingView(),
       debugShowCheckedModeBanner: false,
     );
   }

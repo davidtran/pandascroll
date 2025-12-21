@@ -19,7 +19,7 @@ class HeroPanda extends StatelessWidget {
             width: size * 0.9,
             height: size * 0.9,
             decoration: BoxDecoration(
-              color: AppColors.primaryBrand.withOpacity(0.2),
+              color: AppColors.primaryBrand.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
           ),

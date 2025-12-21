@@ -65,6 +65,27 @@ class AuthController extends AsyncNotifier<bool> {
     }
   }
 
+  Future<void> updateUserProfile({
+    required String level,
+    required List<String> categories,
+  }) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) throw 'User not logged in';
+
+    try {
+      await Supabase.instance.client.from('profiles').upsert({
+        'id': user.id,
+        'level': level,
+        'categories': categories,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e, st) {
+      // If we fail, just propagate for UI to show
+      // In a real app we might retry or handle specific errors
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     await Supabase.instance.client.auth.signOut();
   }

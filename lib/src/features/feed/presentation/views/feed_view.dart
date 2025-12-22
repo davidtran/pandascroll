@@ -163,7 +163,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: Colors.white24),
         boxShadow: const [
@@ -200,7 +200,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   Text(
                     "DAILY PANDA GOAL",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Colors.black,
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.5,

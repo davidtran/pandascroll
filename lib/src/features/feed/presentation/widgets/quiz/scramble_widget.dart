@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_dimens.dart';
 import '../../../domain/models/exercise_model.dart';
-
 import 'package:just_audio/just_audio.dart';
 
 class ScrambleWidget extends StatefulWidget {
@@ -17,6 +16,9 @@ class ScrambleWidget extends StatefulWidget {
     required this.audioUrl,
   });
 
+  // HTML Design Colors
+  static const Color _surfaceDark = Color(0xFF1C2A33);
+
   @override
   State<ScrambleWidget> createState() => _ScrambleWidgetState();
 }
@@ -24,10 +26,11 @@ class ScrambleWidget extends StatefulWidget {
 class _ScrambleWidgetState extends State<ScrambleWidget> {
   late List<ScrambleWord> _availableWords;
   late List<ScrambleWord?> _userAnswers;
-  final Set<int> _usedWordIds = {};
+
+  // Track which original word ID is currently sitting in which answer slot
+  final Set<int> _placedWordIds = {};
 
   bool _isCorrect = false;
-  bool _hasChecked = false;
   late AudioPlayer _audioPlayer;
   bool _isPlaying = false;
 
@@ -35,8 +38,6 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
-
-    // Listen to player state to update UI
     _audioPlayer.playerStateStream.listen((state) {
       if (mounted) {
         setState(() {
@@ -62,22 +63,15 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
 
   void _initExercise() {
     _initAudio();
-
     setState(() {
-      _usedWordIds.clear();
+      _placedWordIds.clear();
       _isCorrect = false;
-      _hasChecked = false;
-      _isPlaying = false;
-
-      // Initialize user answers with nulls (empty slots)
       _userAnswers = List.filled(widget.data.words.length, null);
 
-      // Create ScrambleWord objects from the correct words list
       final allWords = List.generate(
         widget.data.words.length,
         (i) => ScrambleWord(id: i, text: widget.data.words[i]),
       );
-
       allWords.shuffle();
       _availableWords = allWords;
     });
@@ -102,53 +96,24 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
   }
 
   Future<void> _playAudio() async {
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-    } else {
-      await _audioPlayer.seek(Duration.zero);
-      await _audioPlayer.play();
-    }
-  }
-
-  void _handleAvailableWordTap(ScrambleWord word) {
-    if (_isCorrect || _usedWordIds.contains(word.id)) return;
-
-    // Find first empty slot
-    final emptyIndex = _userAnswers.indexOf(null);
-    if (emptyIndex != -1) {
-      setState(() {
-        _userAnswers[emptyIndex] = word;
-        _usedWordIds.add(word.id);
-        _hasChecked = false;
-      });
-
-      _checkAnswer();
-    }
-  }
-
-  void _handleSlotTap(int index) {
-    if (_isCorrect) return;
-
-    final word = _userAnswers[index];
-    if (word != null) {
-      setState(() {
-        _userAnswers[index] = null;
-        _usedWordIds.remove(word.id);
-        _hasChecked = false;
-      });
+    try {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+      } else {
+        await _audioPlayer.seek(Duration.zero);
+        await _audioPlayer.play();
+      }
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
     }
   }
 
   void _checkAnswer() {
-    // Check if all slots are filled
-    if (_userAnswers.contains(null)) {
-      // Maybe show a message "Please fill all blanks"
-      return;
-    }
+    if (_userAnswers.contains(null)) return;
 
     bool isCorrect = true;
     for (int i = 0; i < _userAnswers.length; i++) {
-      if (_userAnswers[i]!.text != widget.data.words[i]) {
+      if (_userAnswers[i]?.text != widget.data.words[i]) {
         isCorrect = false;
         break;
       }
@@ -156,135 +121,233 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
 
     setState(() {
       _isCorrect = isCorrect;
-      _hasChecked = true;
     });
 
     if (isCorrect) {
-      Future.delayed(const Duration(milliseconds: 1000), widget.onCorrect);
+      Future.delayed(const Duration(milliseconds: 800), widget.onCorrect);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Audio Button
-        GestureDetector(
-          onTap: _playAudio,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBrand.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _isPlaying ? Icons.pause_rounded : Icons.volume_up_rounded,
-              color: AppColors.primaryBrand,
-              size: 32,
+        // Audio Header
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+          child: GestureDetector(
+            onTap: _playAudio,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _isPlaying
+                        ? AppColors.bambooDark
+                        : AppColors.bambooDark,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _isPlaying ? Icons.pause_rounded : Icons.volume_up_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  _isPlaying ? "Listening..." : "Tap to listen",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Nunito',
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.xl),
 
-        // Answer Slots Area (Dashes)
-        Wrap(
-          spacing: 8,
-          runSpacing: 16,
-          alignment: WrapAlignment.center,
-          children: List.generate(_userAnswers.length, (index) {
-            final word = _userAnswers[index];
-            return GestureDetector(
-              onTap: () => _handleSlotTap(index),
-              child: _buildSlot(word, index),
+        DragTarget<ScrambleWord>(
+          onWillAccept: (data) {
+            // Only accept if there is an empty slot
+            return _userAnswers.contains(null);
+          },
+          onAccept: (data) {
+            // Find first empty slot
+            final emptyIndex = _userAnswers.indexOf(null);
+            if (emptyIndex != -1) {
+              setState(() {
+                _userAnswers[emptyIndex] = data;
+                _placedWordIds.add(data.id);
+              });
+              _checkAnswer();
+            }
+          },
+          builder: (context, candidateData, rejectedData) {
+            final bool isHovering = candidateData.isNotEmpty;
+            return Container(
+              margin: const EdgeInsets.fromLTRB(0, 24, 0, 16),
+              padding: const EdgeInsets.all(16),
+              constraints: const BoxConstraints(minHeight: 140),
+              decoration: BoxDecoration(
+                color: isHovering ? Colors.grey.shade100 : Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(
+                  color: _isCorrect
+                      ? AppColors.bambooGreen
+                      : (isHovering
+                            ? AppColors.primaryBrand
+                            : ScrambleWidget._surfaceDark),
+                  width: 2,
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  // Centered Hint Text
+                  if (_userAnswers.every((e) => e == null))
+                    const Positioned.fill(
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.drag_indicator,
+                              color: Colors.black26,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              "Drag words here",
+                              style: TextStyle(
+                                color: Colors.black26,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Slots Wrap: Only show filled slots
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.start,
+                    children: List.generate(_userAnswers.length, (index) {
+                      final word = _userAnswers[index];
+                      if (word == null) {
+                        return const SizedBox.shrink();
+                      } else {
+                        // Filled
+                        final isCorrectPosition =
+                            word.text == widget.data.words[index];
+                        return GestureDetector(
+                          onTap: () {
+                            if (_isCorrect) return;
+                            setState(() {
+                              _userAnswers[index] = null;
+                              _placedWordIds.remove(word.id);
+                              _isCorrect = false;
+                            });
+                          },
+                          child: _buildPlacedChip(
+                            word,
+                            isCorrect: isCorrectPosition,
+                          ),
+                        );
+                      }
+                    }),
+                  ),
+                ],
+              ),
             );
-          }),
+          },
         ),
 
-        const SizedBox(height: AppSpacing.xl),
+        const Spacer(),
 
-        // Available Words Area
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: _availableWords
-                .map((word) => _buildOptionChip(word))
-                .toList(),
+        // Word Bank
+        Container(
+          margin: const EdgeInsets.only(top: 24),
+          child: Center(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
+              children: _availableWords.map((word) {
+                final isPlaced = _placedWordIds.contains(word.id);
+                if (isPlaced) {
+                  return const SizedBox.shrink();
+                }
+
+                return Draggable<ScrambleWord>(
+                  data: word,
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: _buildOptionChip(word, isFeedback: true),
+                  ),
+                  childWhenDragging: Opacity(
+                    opacity: 0.0,
+                    child: _buildOptionChip(word),
+                  ),
+                  child: _buildOptionChip(word),
+                );
+              }).toList(),
+            ),
           ),
         ),
+
+        const SizedBox(height: 32),
       ],
     );
   }
 
-  Widget _buildSlot(ScrambleWord? word, int index) {
-    final isFilled = word != null;
-
-    // If checked and incorrect, show red. If correct, show green.
-    Color textColor = AppColors.textMain;
-    Color underlineColor = Colors.grey.shade400;
-
-    if (_hasChecked && isFilled) {
-      if (_isCorrect) {
-        textColor = Colors.green;
-        underlineColor = Colors.green;
-      } else {
-        // We could check individual words if we wanted,
-        // but for now just mark whole sentence as wrong/right
-        textColor = Colors.red;
-        underlineColor = Colors.red;
-      }
-    }
-
+  Widget _buildPlacedChip(ScrambleWord word, {required bool isCorrect}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: underlineColor, width: 2)),
+        color: isCorrect ? AppColors.bambooDark : Colors.redAccent,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        word?.text ?? "       ", // Spaces for empty slot width
-        style: TextStyle(
-          fontSize: 18,
+        word.text,
+        style: const TextStyle(
+          color: Colors.white,
           fontWeight: FontWeight.bold,
-          color: isFilled ? textColor : Colors.transparent,
+          fontSize: 16,
         ),
       ),
     );
   }
 
-  Widget _buildOptionChip(ScrambleWord word) {
-    final isUsed = _usedWordIds.contains(word.id);
-
-    return GestureDetector(
-      onTap: () => _handleAvailableWordTap(word),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isUsed ? 0.3 : 1.0,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.button),
-            boxShadow: [
-              if (!isUsed)
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-            ],
-            border: Border.all(color: AppColors.primaryBrand.withOpacity(0.2)),
-          ),
-          child: Text(
-            word.text,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMain,
-            ),
-          ),
+  Widget _buildOptionChip(ScrambleWord word, {bool isFeedback = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: ScrambleWidget._surfaceDark, // Using the dark surface color
+        borderRadius: BorderRadius.circular(16),
+        border: Border(
+          bottom: BorderSide(color: Colors.black.withOpacity(0.2), width: 3),
+        ),
+      ),
+      child: Text(
+        word.text,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
       ),
     );

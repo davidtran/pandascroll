@@ -220,8 +220,6 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
                     text: "Continue",
                     onPressed: _onContinue,
                     icon: Icons.arrow_forward_rounded,
-                    backgroundColor: primaryColor,
-                    textColor: Colors.white,
                   ),
                 ),
               ),

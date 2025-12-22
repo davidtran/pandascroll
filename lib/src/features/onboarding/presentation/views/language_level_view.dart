@@ -198,14 +198,7 @@ class _LanguageLevelViewState extends State<LanguageLevelView> {
                   ),
                 ),
                 child: SafeArea(
-                  child: PandaButton(
-                    text: "CONTINUE",
-                    onPressed: _onContinue,
-                    backgroundColor: primaryColor,
-                    textColor: Colors.white,
-                    borderColor: const Color(0xFF15803d), // darker green
-                    shadowColor: const Color(0xFF15803d),
-                  ),
+                  child: PandaButton(text: "CONTINUE", onPressed: _onContinue),
                 ),
               ),
             ),

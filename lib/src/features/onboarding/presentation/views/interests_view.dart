@@ -253,9 +253,23 @@ class _InterestsViewState extends State<InterestsView> {
                   left: BorderSide(color: Colors.black, width: 2),
                   right: BorderSide(color: Colors.black, width: 2),
                 )
-              : Border.all(
-                  color: const Color.fromARGB(255, 223, 223, 223),
-                  width: 2,
+              : Border(
+                  top: BorderSide(
+                    color: const Color.fromARGB(255, 223, 223, 223),
+                    width: 2,
+                  ),
+                  bottom: BorderSide(
+                    color: const Color.fromARGB(255, 223, 223, 223),
+                    width: 4,
+                  ),
+                  left: BorderSide(
+                    color: const Color.fromARGB(255, 223, 223, 223),
+                    width: 2,
+                  ),
+                  right: BorderSide(
+                    color: const Color.fromARGB(255, 223, 223, 223),
+                    width: 2,
+                  ),
                 ),
         ),
         child: Stack(

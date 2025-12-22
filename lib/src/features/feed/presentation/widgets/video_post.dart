@@ -188,20 +188,50 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         // Removed: if (!_isInitialized) ... Loading indicator
         // We can add it back if the Players report "isLoaded" state,
         // but for now let's rely on the player's native loading or add a callback later.
+        // 1. Transparent Tap Layer
         GestureDetector(
           onTap: _togglePlayPause,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.7),
-                  Colors.transparent,
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.7),
-                ],
-                stops: const [0.0, 0.2, 0.8, 1.0],
+          child: Container(color: Colors.transparent),
+        ),
+
+        // 2. Top Gradient (Custom height)
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 150, // Slightly more than 50 for smooth fade, or 50 if strict
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black,
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 3. Bottom Gradient (For text readability)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 150,
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                ),
               ),
             ),
           ),
@@ -254,23 +284,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                       backgroundImage: NetworkImage(widget.video.authorUrl),
                     ),
                   ),
-                  Positioned(
-                    bottom: -10,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.accent, // Orange
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.white, spreadRadius: 2),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -292,6 +305,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                 onTap: widget.onShowComments,
               ),
               const SizedBox(height: 20),
+              _buildActionItem(Icons.closed_caption, "Caption", Colors.white),
             ],
           ),
         ),
@@ -353,7 +367,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                       onPressed: widget.onStartQuiz,
                       icon: Icons.pets,
                       backgroundColor: AppColors.accent, // Orange
-                      textColor: Colors.white,
                       borderColor: AppColors.accent,
 
                       shadowColor: const Color(

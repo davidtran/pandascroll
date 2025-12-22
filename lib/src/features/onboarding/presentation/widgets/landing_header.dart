@@ -24,11 +24,11 @@ class LandingHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.bambooGreen, width: 2),
+                  border: Border.all(color: AppColors.pandaBlack, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.bambooGreen.withOpacity(0.3),
-                      offset: const Offset(0, 4),
+                      color: AppColors.pandaBlack,
+                      offset: const Offset(0, 2),
                       blurRadius: 0,
                     ),
                   ],

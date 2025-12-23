@@ -1,25 +1,176 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_dimens.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:pandascroll/src/core/theme/app_colors.dart';
+import 'package:pandascroll/src/core/theme/app_dimens.dart';
+import 'package:pandascroll/src/core/theme/app_theme.dart';
+import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/exercise_model.dart';
 import 'quiz/word_quiz_widget.dart';
 import 'quiz/scramble_widget.dart';
 import 'quiz/video_understanding_widget.dart';
 import 'quiz/cloze_widget.dart';
-
 import 'quiz/parrot_widget.dart';
+import 'quiz/quiz_feedback_sheet.dart';
+
+// --- Bamboo Progress Components ---
+
+enum AnswerStatus { unanswer, correct, wrong }
+
+class BambooSegmentPainter extends CustomPainter {
+  final Color color;
+  final bool isFirst;
+  final bool isLast;
+
+  BambooSegmentPainter({
+    required this.color,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final Path path = Path();
+
+    // clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+    // Adapt for rounded ends on first/last
+
+    double slant = size.width * 0.1; // 10% slant or fixed
+    if (slant > 6) slant = 6;
+
+    // Moves: TL -> TR -> BR -> BL
+    // Normal: (slant, 0) -> (w, 0) -> (w-slant, h) -> (0, h)
+
+    double leftTopX = slant;
+    double rightTopX = size.width;
+    double rightBottomX = size.width - slant;
+    double leftBottomX = 0;
+
+    if (isFirst) {
+      // First: Rounded Left.
+      // Rect from 0 to W.
+      // Let's use RRect for the left side?
+      // Or just a path that rounds.
+      // Simple approximation: (0,0) with radius...
+
+      // Let's stick to the polygon logic but 'unslant' the left for first?
+      // User Pill design: <div class="rounded-l-full ...">
+
+      path.moveTo(size.height / 2, 0); // Start after arc top
+      path.lineTo(rightTopX, 0);
+      path.lineTo(rightBottomX, size.height);
+      path.lineTo(size.height / 2, size.height);
+
+      // add arc left
+      path.arcToPoint(
+        Offset(size.height / 2, 0),
+        radius: Radius.circular(size.height / 2),
+        clockwise: true,
+      );
+    } else if (isLast) {
+      path.moveTo(leftTopX, 0);
+      path.lineTo(size.width - size.height / 2, 0);
+      path.arcToPoint(
+        Offset(size.width - size.height / 2, size.height),
+        radius: Radius.circular(size.height / 2),
+        clockwise: true,
+      );
+      path.lineTo(leftBottomX, size.height);
+      path.lineTo(leftTopX, 0);
+    } else {
+      path.moveTo(leftTopX, 0);
+      path.lineTo(rightTopX, 0);
+      path.lineTo(rightBottomX, size.height);
+      path.lineTo(leftBottomX, size.height);
+      path.close();
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class BambooProgressBar extends StatelessWidget {
+  final int totalSteps;
+  final List<AnswerStatus> statusList;
+
+  const BambooProgressBar({
+    super.key,
+    required this.totalSteps,
+    required this.statusList,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 12, // h-3
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: List.generate(totalSteps, (index) {
+          final isFirst = index == 0;
+          final isLast = index == totalSteps - 1;
+
+          Color color;
+          // Logic: "passed" ones are correct/wrong. Future ones are light.
+          // Is current index passed?
+          // If index < statusList.length, use status.
+          // Else unanswer.
+
+          if (index < statusList.length) {
+            final status = statusList[index];
+            if (status == AnswerStatus.correct) {
+              color = const Color(0xFF2B7FFF); // Blue ish
+            } else if (status == AnswerStatus.wrong) {
+              color = const Color(0xFFFF4B4B); // Red
+            } else {
+              color = AppColors.primaryBrand.withOpacity(0.3);
+            }
+          } else {
+            color = AppColors.primaryBrand.withOpacity(0.3); // Inactive
+          }
+
+          // Special case for 'Current' active segment? User didn't specify.
+          // Just "no answer yet = gray" (or light primary).
+
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1), // gap-1
+              child: CustomPaint(
+                painter: BambooSegmentPainter(
+                  color: color,
+                  isFirst: isFirst,
+                  isLast: isLast,
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
 
 class QuizPanel extends StatefulWidget {
   final String videoId;
   final String audioUrl;
   final Function(String title)? onTitleChanged;
+  final VoidCallback onClose;
+  final VoidCallback? onNextVideo;
 
   const QuizPanel({
     super.key,
     required this.videoId,
     required this.audioUrl,
     this.onTitleChanged,
+    required this.onClose,
+    this.onNextVideo,
   });
 
   @override
@@ -35,10 +186,46 @@ class _QuizPanelState extends State<QuizPanel> {
   String firstTitle = "";
   int _correctCount = 0;
 
+  // Bamboo State
+  List<AnswerStatus> _answerStatus = [];
+  int _lives = 5;
+
+  late AudioPlayer _audioPlayer;
+
   @override
   void initState() {
     super.initState();
+    _audioPlayer = AudioPlayer();
     _fetchExercises();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playAudio({required double start, required double end}) async {
+    print('play ${start} - ${end}');
+    print(widget.audioUrl);
+    try {
+      if (start < end) {
+        await _audioPlayer.setAudioSource(
+          ClippingAudioSource(
+            start: Duration(milliseconds: (start * 1000).toInt()),
+            end: Duration(milliseconds: ((end + 5) * 1000).toInt()),
+            child: AudioSource.uri(Uri.parse(widget.audioUrl)),
+          ),
+        );
+        await _audioPlayer.play();
+      }
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
+    }
+  }
+
+  Future<void> _pauseAudio() async {
+    await _audioPlayer.pause();
   }
 
   @override
@@ -52,6 +239,8 @@ class _QuizPanelState extends State<QuizPanel> {
         _isLoading = true;
         _error = null;
         _correctCount = 0;
+        _answerStatus = [];
+        _lives = 5; // Reset lives? assumption
       });
       _fetchExercises();
     } else {
@@ -76,6 +265,9 @@ class _QuizPanelState extends State<QuizPanel> {
         setState(() {
           _exercises = data.map((e) => ExerciseModel.fromJson(e)).toList();
           _isLoading = false;
+          // Initialize answer status as unanswer? or leave empty and append?
+          // List must match index? The progress bar is fixed size.
+          // we track history.
         });
         print(_exercises);
         if (_exercises.isNotEmpty) {
@@ -93,13 +285,6 @@ class _QuizPanelState extends State<QuizPanel> {
         });
       }
     }
-  }
-
-  void _handleAnswer(bool isCorrect) {
-    if (isCorrect) {
-      _correctCount++;
-    }
-    _nextExercise();
   }
 
   void _nextExercise() {
@@ -129,9 +314,6 @@ class _QuizPanelState extends State<QuizPanel> {
         widget.onTitleChanged?.call(title);
       }
     } else if (_currentIndex > 0) {
-      // NOTE: Moving back does not decrement score to keep things simple,
-      // or we could implementing logic to undo the score if re-attempting is allowed.
-      // For now, simple navigation.
       setState(() {
         _currentIndex--;
       });
@@ -142,8 +324,190 @@ class _QuizPanelState extends State<QuizPanel> {
     }
   }
 
+  void _showFeedback(bool isCorrect, {String? correctAnswer}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => QuizFeedbackSheet(
+        isCorrect: isCorrect,
+        correctAnswer: correctAnswer,
+        audioUrl: widget.audioUrl,
+        onNext: () {
+          Navigator.pop(context);
+          if (isCorrect) {
+            _nextExercise();
+          }
+        },
+        onRetry: () {
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  String? _getExerciseCorrectAnswer(ExerciseModel exercise) {
+    if (exercise.type == 'scramble') {
+      final data = ScrambleData.fromJson(exercise.data);
+      return data.sentenceText;
+    } else if (exercise.type == 'video_understanding') {
+      final data = VideoUnderstandingData.fromJson(exercise.data);
+      return data.correctAnswer;
+    } else if (exercise.type == 'cloze') {
+      final data = ClozeData.fromJson(exercise.data);
+      return data.correctAnswer;
+    } else if (exercise.type == 'parrot') {
+      final data = ParrotData.fromJson(exercise.data);
+      return data.sentenceText;
+    } else if (exercise.type == 'word_quiz') {
+      final data = WordQuizData.fromJson(exercise.data);
+      return "${data.word}: ${data.correctMeaning}";
+    }
+    return null;
+  }
+
+  void _handleAnswer(bool isCorrect) {
+    setState(() {
+      // Update logic: ensure we don't duplicate on retry?
+      // If _currentIndex is already in _answerStatus (retry), update it?
+      // Or just append.
+      // Current Index: _currentIndex.
+      if (_answerStatus.length <= _currentIndex) {
+        _answerStatus.add(
+          isCorrect ? AnswerStatus.correct : AnswerStatus.wrong,
+        );
+      } else {
+        // Update existing (retry case)
+        _answerStatus[_currentIndex] = isCorrect
+            ? AnswerStatus.correct
+            : AnswerStatus.wrong;
+      }
+
+      if (!isCorrect) {
+        // Only decrement lives on first failure? Or every failure?
+        // Simple logic: every failure.
+        if (_lives > 0) _lives--;
+      }
+    });
+
+    if (isCorrect) {
+      _correctCount++;
+      final correctAnswer = _getExerciseCorrectAnswer(
+        _exercises[_currentIndex],
+      );
+      _showFeedback(true, correctAnswer: correctAnswer);
+    } else {
+      // Just update state, don't move next.
+      // (Scramble/Cloze handles their own Retry/Feedback triggering).
+      // But wait...
+      // IF Scramble calls onWrong, it calls _handleAnswer(false).
+      // My code in Scramble/Cloze: onWrong: () => _showFeedback(false).
+      // They DO NOT call _handleAnswer(false) in my previous edit!
+      // They call `_showFeedback` directly!
+      // I need to update `_buildExerciseContent` to update status also.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 1. Always show the layout with Header
+    return Column(
+      children: [
+        // BAMBOO HEADER
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.favorite, color: Colors.red, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    "$_lives",
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      fontFamily: 'Fredoka',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(width: 12),
+              Expanded(
+                child: BambooProgressBar(
+                  totalSteps: _exercises.length,
+                  statusList: _answerStatus,
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () => widget.onClose(),
+                child: const Icon(Icons.close, color: Colors.grey, size: 20),
+              ),
+            ],
+          ),
+        ),
+
+        // 2. Content Area (Switch based on state)
+        Expanded(child: _buildBodyContent()),
+        if (!_isCompleted)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _currentIndex--;
+                  }),
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                ),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      // SKIP
+                      setState(() {
+                        if (_answerStatus.length <= _currentIndex) {
+                          _answerStatus.add(AnswerStatus.unanswer);
+                        }
+                      });
+                      _nextExercise();
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.grey),
+                    child: const Text(
+                      "Skip Question",
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _currentIndex++;
+                  }),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: AppSpacing.md),
+      ],
+    );
+  }
+
+  Widget _buildBodyContent() {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primaryBrand),
@@ -156,7 +520,6 @@ class _QuizPanelState extends State<QuizPanel> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            const SizedBox(height: AppSpacing.md),
             Text(
               "Failed to load quiz",
               style: Theme.of(context).textTheme.titleMedium,
@@ -186,75 +549,17 @@ class _QuizPanelState extends State<QuizPanel> {
 
     final currentExercise = _exercises[_currentIndex];
 
-    return Column(
-      children: [
-        // Progress Bar
-        LinearProgressIndicator(
-          value: (_currentIndex + 1) / _exercises.length,
-          backgroundColor: Colors.grey.shade200,
-          valueColor: const AlwaysStoppedAnimation<Color>(
-            AppColors.primaryBrand,
-          ),
-          minHeight: 6,
-        ),
-
-        // Header with Navigation
-        Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.md),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                onPressed: _currentIndex > 0 ? _previousExercise : null,
-                icon: const Icon(Icons.arrow_back_ios_rounded),
-                color: AppColors.textMain,
-                iconSize: 16,
-              ),
-              Text(
-                "Question ${_currentIndex + 1}/${_exercises.length}",
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textMain,
-                ),
-              ),
-              IconButton(
-                onPressed:
-                    _nextExercise, // Only navigation, score Logic handled in content
-                icon: const Icon(Icons.arrow_forward_ios_rounded),
-                color: AppColors.textMain,
-                iconSize: 16,
-              ),
-            ],
-          ),
-        ),
-
-        // Exercise Content
-        Expanded(
-          child: CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      Expanded(child: _buildExerciseContent(currentExercise)),
-                      const SizedBox(height: AppSpacing.md),
-                      TextButton(
-                        onPressed: () => _handleAnswer(false),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey,
-                        ),
-                        child: const Text(
-                          "Skip Question",
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              children: [
+                Expanded(child: _buildExerciseContent(currentExercise)),
+              ],
+            ),
           ),
         ),
       ],
@@ -270,12 +575,6 @@ class _QuizPanelState extends State<QuizPanel> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.check_circle_outline_rounded,
-            color: Colors.green,
-            size: 80,
-          ),
-          const SizedBox(height: AppSpacing.lg),
           Text(
             "Congratulations!",
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -292,35 +591,25 @@ class _QuizPanelState extends State<QuizPanel> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
-          ElevatedButton(
+          PandaButton(
+            width: 200,
             onPressed: () {
-              setState(() {
-                _currentIndex = 0;
-                _isCompleted = false;
-                _correctCount = 0;
-              });
-              print(firstTitle);
-              if (firstTitle.isNotEmpty) {
-                widget.onTitleChanged?.call(firstTitle);
+              if (widget.onNextVideo != null) {
+                widget.onNextVideo!();
+              } else {
+                setState(() {
+                  _currentIndex = 0;
+                  _isCompleted = false;
+                  _correctCount = 0;
+                  _answerStatus = [];
+                  _lives = 5;
+                });
+                if (firstTitle.isNotEmpty) {
+                  widget.onTitleChanged?.call(firstTitle);
+                }
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBrand,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.button),
-              ),
-            ),
-            child: const Text(
-              "Review Exercises",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            text: "Next Video",
           ),
         ],
       ),
@@ -338,7 +627,23 @@ class _QuizPanelState extends State<QuizPanel> {
         return ScrambleWidget(
           data: ScrambleData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
+          onWrong: () {
+            // Handle Wrong: Update status + Show Feedback
+            setState(() {
+              if (_answerStatus.length <= _currentIndex) {
+                _answerStatus.add(AnswerStatus.wrong);
+              } else {
+                _answerStatus[_currentIndex] = AnswerStatus.wrong;
+              }
+              if (_lives > 0) _lives--;
+            });
+            final correctAnswer = _getExerciseCorrectAnswer(exercise);
+            _showFeedback(false, correctAnswer: correctAnswer);
+          },
           audioUrl: widget.audioUrl,
+          onPlayAudio: _playAudio,
+          onPauseAudio: _pauseAudio,
+          audioStateStream: _audioPlayer.playerStateStream,
         );
       case 'video_understanding':
         return VideoUnderstandingWidget(
@@ -349,13 +654,42 @@ class _QuizPanelState extends State<QuizPanel> {
         return ClozeWidget(
           data: ClozeData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
+          onWrong: () {
+            setState(() {
+              if (_answerStatus.length <= _currentIndex) {
+                _answerStatus.add(AnswerStatus.wrong);
+              } else {
+                _answerStatus[_currentIndex] = AnswerStatus.wrong;
+              }
+              if (_lives > 0) _lives--;
+            });
+            final correctAnswer = _getExerciseCorrectAnswer(exercise);
+            _showFeedback(false, correctAnswer: correctAnswer);
+          },
           audioUrl: widget.audioUrl,
+          onPlayAudio: _playAudio,
+          onPauseAudio: _pauseAudio,
+          audioStateStream: _audioPlayer.playerStateStream,
         );
       case 'parrot':
         return ParrotWidget(
           data: ParrotData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
+          onWrong: () {
+            setState(() {
+              if (_answerStatus.length <= _currentIndex) {
+                _answerStatus.add(AnswerStatus.wrong);
+              } else {
+                _answerStatus[_currentIndex] = AnswerStatus.wrong;
+              }
+              if (_lives > 0) _lives--;
+            });
+            _showFeedback(false);
+          },
           audioUrl: widget.audioUrl,
+          onPlayAudio: _playAudio,
+          onPauseAudio: _pauseAudio,
+          audioStateStream: _audioPlayer.playerStateStream,
         );
       default:
         return Center(child: Text("Unknown exercise type: ${exercise.type}"));

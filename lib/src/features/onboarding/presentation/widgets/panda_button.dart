@@ -12,6 +12,8 @@ class PandaButton extends StatefulWidget {
   final double height;
   final double fontSize;
   final Color? shadowColor;
+  final double? width;
+  final Widget? leading;
 
   const PandaButton({
     super.key,
@@ -25,6 +27,8 @@ class PandaButton extends StatefulWidget {
     this.height = 64,
     this.fontSize = 20,
     this.shadowColor,
+    this.width = double.infinity,
+    this.leading,
   });
 
   @override
@@ -44,7 +48,7 @@ class _PandaButtonState extends State<PandaButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         height: widget.height,
-        width: double.infinity,
+        width: widget.width,
         margin: EdgeInsets.only(
           top: _isPressed ? 4 : 0,
           bottom: _isPressed ? 0 : 4,
@@ -56,19 +60,7 @@ class _PandaButtonState extends State<PandaButton> {
           boxShadow: [
             if (!_isPressed)
               BoxShadow(
-                color:
-                    widget.shadowColor ??
-                    Colors.black.withValues(
-                      alpha: 1,
-                    ), // Solid black shadow for cartoon look?
-                // Wait, AdventureButton had withValues(alpha: 0.15) before.
-                // But user asked for "border should be black" -> cartoon style?
-                // Usually cartoon buttons have solid black shadows or opaque shadows.
-                // I will use 100% black shadow if they asked for black border.
-                // Or maybe just keeping the shadow as distinct.
-                // Let's stick to the 3D effect shadow.
-                // Using 1.0 alpha looks very "brutalist"/cartoon.
-                // I'll stick to logic: border is black, text is black.
+                color: widget.shadowColor ?? Colors.black.withValues(alpha: 1),
                 offset: const Offset(0, 4),
                 blurRadius: 0,
               ),
@@ -77,6 +69,10 @@ class _PandaButtonState extends State<PandaButton> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (widget.leading != null) ...[
+              widget.leading!,
+              const SizedBox(width: AppSpacing.sm),
+            ],
             Text(
               widget.text,
               style: TextStyle(

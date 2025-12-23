@@ -140,7 +140,7 @@ class LandingView extends StatelessWidget {
                                 height: 1.1,
                               ),
                             ),
-                            const JoyText(),
+                            const JoyText(text: "Joy"),
                           ],
                         ),
                         const SizedBox(height: AppSpacing.md),

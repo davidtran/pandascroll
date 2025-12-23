@@ -69,12 +69,13 @@ class _TargetLanguageViewState extends State<TargetLanguageView> {
 
   @override
   Widget build(BuildContext context) {
+    const Color creamBg = Color(0xFFFEFDF5);
     const Color bgLight = Color(0xFFF0FDF4); // bg-background-light
     const Color primaryColor = AppColors.bambooGreen;
     const Color textMain = Color(0xFF1E293B);
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: creamBg,
       body: SafeArea(
         bottom: false,
         child: Stack(

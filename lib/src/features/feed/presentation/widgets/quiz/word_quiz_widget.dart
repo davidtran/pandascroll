@@ -47,100 +47,187 @@ class _WordQuizWidgetState extends State<WordQuizWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          widget.data.word,
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textMain,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        // Options Grid (Column of Rows)
-        ...List.generate((widget.data.options.length / 2).ceil(), (rowIndex) {
-          final startIndex = rowIndex * 2;
-          final endIndex = startIndex + 2;
-          final rowOptions = widget.data.options.sublist(
-            startIndex,
-            endIndex > widget.data.options.length
-                ? widget.data.options.length
-                : endIndex,
-          );
+    // Determine if audio is playing... User didn't ask for audio in WordQuiz but the image has "Tap to listen".
+    // The previous implementation didn't have audio logic here, but the data model probably might not have it.
+    // Wait, typical WordQuiz is text based. But Duolingo usually has audio.
+    // The user image shows "Translate this word" + "Tap to listen".
+    // I don't have audioUrl in WordQuizData readily available?
+    // `ExerciseModel` wraps `data`. `WordQuizData` has `word`.
+    // `QuizPanel` passes `audioUrl` to other widgets but NOT `WordQuizWidget` in `_buildExerciseContent`!
+    // I should check `_buildExerciseContent` in `QuizPanel`.
+    // It passes `onCorrect`.
+    // I will stick to what I have, plus the design. I'll add a dummy button or functional if I can?
+    // The user just said "improve the design".
+    // I'll assume just visual update.
 
-          final rowWidgets = rowOptions.map((option) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: AspectRatio(
-                  aspectRatio: 2.0,
-                  child: _buildOption(option),
-                ),
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header Section (Panda + Text)
+          // Mimicking the uploaded image
+          Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                children: [
+                  const SizedBox(height: 60), // Space for Panda
+                  Text(
+                    "TRANSLATE THIS WORD",
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.data.word,
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      // Smaller than displayLarge
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Optional Pinyin if available, or just subtitle
+                  // The image shows "(Ni hao)" below the word.
+                  // My data model `WordQuizData` doesn't seem to have pinyin field, just `word` and `correctMeaning`.
+                  // I'll skip pinyin for now.
+                  const SizedBox(height: 24),
+
+                  // Audio Button (Visual placeholder or simple interactivity?)
+                  // Since I don't have audioUrl passed, I'll omit it or use a default if needed.
+                  // Actually, avoiding broken features is better. I'll omit the "Tap to listen" unless I can access TTS.
+                ],
               ),
-            );
-          }).toList();
+              // Panda Image Header (Using Image asset or Decoration?)
+              // The user prompt had "panda_hero_decoration.dart" in open files.
+              // The image shows a full colored 3D panda. The code draws a CSS-like Panda.
+              // I'll use the Asset image for the 3D panda if available, or just no panda for now to avoid errors?
+              // The user prompt *showed* the 3D panda in the screenshot properly.
+              // But the code provided for `PandaHeroDecoration` draws a simple panda.
+              // I'll leave the mascot out to focus on the OPTIONS design which was the HTML code provided.
+              // The HTML code wrapper was `<div class="flex flex-col gap-3 ...">`. This is mainly for options.
+            ],
+          ),
 
-          // If row has only 1 item, add an empty Expanded to keep grid alignment
-          if (rowWidgets.length < 2) {
-            rowWidgets.add(const Expanded(child: SizedBox()));
-          }
+          const SizedBox(height: 32),
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Row(children: rowWidgets),
-          );
-        }),
-      ],
+          // Options List
+          Column(
+            children: widget.data.options.asMap().entries.map((entry) {
+              final index = entry.key;
+              final option = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildOptionCard(option, index),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildOption(String option) {
+  Widget _buildOptionCard(String option, int index) {
+    // Generate A, B, C, D labels
+    final String label = String.fromCharCode(65 + index); // 65 is 'A'
+
     final isSelected = _selectedOption == option;
     final isCorrect = option == widget.data.correctMeaning;
 
-    Color backgroundColor = Colors.white; // Default to white like other widgets
-    Color borderColor = Colors.grey.shade200;
-    Color textColor = AppColors.textMain;
+    // Default Colors
+    Color colorBg = Colors.white;
+    Color colorBorder = Colors.grey.shade200;
+    Color colorText = Colors.grey.shade700;
+    Color colorLabelBg = Colors.grey.shade100;
+    Color colorLabelText = Colors.grey.shade500;
+    double elevation = 2;
 
     if (_isAnswered) {
       if (isSelected) {
         if (isCorrect) {
-          backgroundColor = Colors.green.shade100;
-          borderColor = Colors.green;
-          textColor = Colors.green.shade900;
+          // Selected Correct
+          colorBg = Colors.green.shade50;
+          colorBorder = Colors.green;
+          colorText = Colors.green.shade900;
+          colorLabelBg = Colors.green;
+          colorLabelText = Colors.white;
         } else {
-          backgroundColor = Colors.red.shade100;
-          borderColor = Colors.red;
-          textColor = Colors.red.shade900;
+          // Selected Wrong
+          colorBg = Colors.red.shade50;
+          colorBorder = Colors.red;
+          colorText = Colors.red.shade900;
+          colorLabelBg = Colors.red;
+          colorLabelText = Colors.white;
         }
       } else if (isCorrect) {
-        backgroundColor = Colors.green.shade100;
-        borderColor = Colors.green;
-        textColor = Colors.green.shade900;
+        // Unselected Correct (Reveal)
+        colorBg = Colors.green.shade50;
+        colorBorder = Colors.green;
+        colorText = Colors.green.shade900;
+        colorLabelBg = Colors.green;
+        colorLabelText = Colors.white;
       }
     }
 
     return GestureDetector(
       onTap: () => _handleOptionTap(option),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(AppRadius.button),
-          border: Border.all(color: borderColor, width: 2),
+          color: colorBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colorBorder, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: !_isAnswered || !isSelected
+                  ? Colors.black.withOpacity(0.05)
+                  : colorBorder,
+              offset: const Offset(0, 4),
+              blurRadius: 0,
+            ),
+          ],
         ),
-        alignment: Alignment.center,
-        child: Text(
-          option,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        child: Row(
+          children: [
+            // Label Box (A, B, C)
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colorLabelBg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: colorLabelText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Option Text
+            Expanded(
+              child: Text(
+                option,
+                style: TextStyle(
+                  color: colorText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

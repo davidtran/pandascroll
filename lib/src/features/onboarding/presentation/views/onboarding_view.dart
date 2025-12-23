@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../widgets/joy_text.dart';
+import '../widgets/landing_background_painter.dart';
 import '../widgets/panda_button.dart';
-import '../widgets/phone_mockup.dart';
 import 'native_language_view.dart';
 import 'dart:math' as math;
 
@@ -26,22 +27,31 @@ class _OnboardingViewState extends State<OnboardingView> {
 
   final List<Map<String, dynamic>> _slides = [
     {
-      "step": "Step 1: Immersion",
-      "icon": Icons.school_rounded,
-      "title": "Don't Just Watch. Do.",
-      "body": "Learn real languages from real videos. Swipe up to learn.",
+      "step": "Step 1: Watch",
+      "icon": Icons.ondemand_video_rounded,
+      "titlePrefix": "Immersion through",
+      "joyText": "video!",
+      "body":
+          "Scroll through millions of videos in the language you want to learn. It's fun and effective!",
+      "image": "assets/images/panda_login.png",
     },
     {
-      "step": "Step 2: Interaction",
-      "icon": Icons.touch_app_rounded,
-      "title": "Quizzes Inside Action.",
-      "body": "Tap the right answer while the video plays. Miss it? Try again.",
+      "step": "Step 2: Play",
+      "icon": Icons.videogame_asset_rounded,
+      "titlePrefix": "Don't just watch.",
+      "joyText": "Interaction!",
+      "body": "Do the exercises to lock it in. It's fun, fast and effective!",
+      "image": "assets/images/panda_thinking.png",
     },
     {
-      "step": "Step 3: Mastery",
-      "icon": Icons.sports_kabaddi_rounded,
-      "title": "Defeat the Boss.",
-      "body": "Prove your skills in epic boss battles and earn loot.",
+      "step": "Step 3: LangRot",
+      "icon": Icons.psychology_rounded,
+      "titlePrefix": "Rot your brain with a",
+      "imageWidth": 180,
+      "joyText": "new language",
+      "body":
+          "Dive into endless short videos and exercises until you achieve total fluency!",
+      "image": "assets/images/panda_learn.png",
     },
   ];
 
@@ -67,11 +77,10 @@ class _OnboardingViewState extends State<OnboardingView> {
         children: [
           // --- Background Decorations ---
 
-          // Dots Pattern (Custom Painter for "bg-dots")
+          // --- Background Decorations ---
+          // Landing Background
           Positioned.fill(
-            child: CustomPaint(
-              painter: DotsPainter(color: pandaBorder.withOpacity(0.08)),
-            ),
+            child: CustomPaint(painter: LandingBackgroundPainter()),
           ),
 
           // Blurred Blobs
@@ -180,130 +189,110 @@ class _OnboardingViewState extends State<OnboardingView> {
                         children: [
                           // Illustration Area
                           Expanded(
-                            flex: 3,
                             child: Center(
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                alignment: Alignment.center,
-                                children: [
-                                  // Decorative Emojis
-                                  const Positioned(
-                                    top: -20,
-                                    right: 10,
-                                    child: Text(
-                                      "🐼",
-                                      style: TextStyle(fontSize: 60),
-                                    ),
-                                    // Add bounce animation if time permits
-                                  ),
-                                  const Positioned(
-                                    bottom: 30,
-                                    left: -10,
-                                    child: Text(
-                                      "🎋",
-                                      style: TextStyle(fontSize: 48),
-                                    ),
-                                  ),
-
-                                  // Phone Mockup (Rotated)
-                                  Transform.rotate(
-                                    angle: -2 * math.pi / 180, // -2 degrees
-                                    child: const PhoneMockup(
-                                      width: 260,
-                                      height:
-                                          500, // Slightly smaller to fit layout
-                                    ),
-                                  ),
-                                ],
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Image.asset(
+                                  slide['image'],
+                                  fit: BoxFit.fill,
+                                  width:
+                                      (slide['imageWidth'] as num?)
+                                          ?.toDouble() ??
+                                      250.0,
+                                ),
                               ),
                             ),
                           ),
 
                           // Text Content
-                          Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 32,
-                              ),
-                              child: Column(
-                                children: [
-                                  // Badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 6,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 32,
+                            ),
+                            child: Column(
+                              children: [
+                                // Badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: pandaBorder,
+                                      width: 2,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: pandaGreen,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
+                                    boxShadow: const [
+                                      BoxShadow(
                                         color: pandaBorder,
-                                        width: 2,
+                                        offset: Offset(2, 2),
+                                        blurRadius: 0,
                                       ),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: pandaBorder,
-                                          offset: Offset(2, 2),
-                                          blurRadius: 0,
-                                        ),
-                                      ],
-                                    ),
-                                    transform: Matrix4.rotationZ(
-                                      -1 * math.pi / 180,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          slide['icon'],
-                                          size: 16,
+                                    ],
+                                  ),
+                                  transform: Matrix4.rotationZ(
+                                    -1 * math.pi / 180,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        slide['icon'],
+                                        size: 16,
+                                        color: pandaDark,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        slide['step'].toUpperCase(),
+                                        style: const TextStyle(
                                           color: pandaDark,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 12,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          slide['step'].toUpperCase(),
-                                          style: const TextStyle(
-                                            color: pandaDark,
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 16),
+                                ),
+                                const SizedBox(height: 18),
 
-                                  // Title
-                                  Text(
-                                    slide['title'],
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontFamily:
-                                          'Nunito', // Or 'Cartoon' font from HTML
+                                // Title
+                                Column(
+                                  children: [
+                                    Text(
+                                      slide['titlePrefix'],
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontFamily: 'Fredoka',
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: pandaDark,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                    JoyText(
+                                      text: slide['joyText'],
                                       fontSize: 32,
-                                      fontWeight: FontWeight.w900,
-                                      color: pandaDark,
-                                      height: 1.1,
+                                      borderColor: Colors.amberAccent,
                                     ),
-                                  ),
-                                  const SizedBox(height: 12),
+                                  ],
+                                ),
+                                const SizedBox(height: 18),
 
-                                  // Body
-                                  Text(
-                                    slide['body'],
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontFamily: 'Nunito',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey, // gray-500
-                                      height: 1.4,
-                                    ),
+                                // Body
+                                Text(
+                                  slide['body'],
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontFamily: 'Nunito',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black45, // gray-500
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -376,25 +365,4 @@ extension BlurExt on Widget {
       ),
     );
   }
-}
-
-class DotsPainter extends CustomPainter {
-  final Color color;
-  DotsPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    const double spacing = 24;
-    const double radius = 1;
-
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), radius, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -7,13 +7,22 @@ import 'package:just_audio/just_audio.dart';
 class ScrambleWidget extends StatefulWidget {
   final ScrambleData data;
   final VoidCallback onCorrect;
+  final VoidCallback? onWrong;
   final String audioUrl;
+  final Future<void> Function({required double start, required double end})
+  onPlayAudio;
+  final Future<void> Function() onPauseAudio;
+  final Stream<PlayerState> audioStateStream;
 
   const ScrambleWidget({
     super.key,
     required this.data,
     required this.onCorrect,
+    this.onWrong,
     required this.audioUrl,
+    required this.onPlayAudio,
+    required this.onPauseAudio,
+    required this.audioStateStream,
   });
 
   // HTML Design Colors
@@ -31,14 +40,13 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
   final Set<int> _placedWordIds = {};
 
   bool _isCorrect = false;
-  late AudioPlayer _audioPlayer;
   bool _isPlaying = false;
 
   @override
   void initState() {
     super.initState();
-    _audioPlayer = AudioPlayer();
-    _audioPlayer.playerStateStream.listen((state) {
+    // Listen to parent stream
+    widget.audioStateStream.listen((state) {
       if (mounted) {
         setState(() {
           _isPlaying =
@@ -56,13 +64,15 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
   void didUpdateWidget(ScrambleWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.data != oldWidget.data) {
-      _audioPlayer.stop();
+      // _audioPlayer.stop(); // Handled by parent or new stream event
+      // We don't have control to stop parent audio here directly unless we pause.
+      widget.onPauseAudio();
       _initExercise();
     }
   }
 
   void _initExercise() {
-    _initAudio();
+    // _initAudio(); // Removed
     setState(() {
       _placedWordIds.clear();
       _isCorrect = false;
@@ -77,31 +87,21 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
     });
   }
 
-  Future<void> _initAudio() async {
-    try {
-      await _audioPlayer.setUrl(widget.audioUrl);
-      await _audioPlayer.setClip(
-        start: Duration(milliseconds: (widget.data.audioStart * 1000).toInt()),
-        end: Duration(milliseconds: (widget.data.audioEnd * 1000).toInt()),
-      );
-    } catch (e) {
-      debugPrint("Error initializing audio: $e");
-    }
-  }
-
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    // _audioPlayer.dispose(); // Removed
     super.dispose();
   }
 
   Future<void> _playAudio() async {
     try {
       if (_isPlaying) {
-        await _audioPlayer.pause();
+        await widget.onPauseAudio();
       } else {
-        await _audioPlayer.seek(Duration.zero);
-        await _audioPlayer.play();
+        await widget.onPlayAudio(
+          start: widget.data.audioStart,
+          end: widget.data.audioEnd,
+        );
       }
     } catch (e) {
       debugPrint("Error playing audio: $e");
@@ -124,7 +124,10 @@ class _ScrambleWidgetState extends State<ScrambleWidget> {
     });
 
     if (isCorrect) {
-      Future.delayed(const Duration(milliseconds: 800), widget.onCorrect);
+      widget.onCorrect();
+    } else {
+      // All slots filled but incorrect
+      widget.onWrong?.call();
     }
   }
 

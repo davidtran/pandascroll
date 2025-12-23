@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class JoyText extends StatelessWidget {
-  const JoyText({super.key});
+  final String text;
+  final double? fontSize;
+  final Color borderColor;
+  const JoyText({
+    super.key,
+    required this.text,
+    this.fontSize = 48,
+    this.borderColor = AppColors.bambooGreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -10,10 +18,10 @@ class JoyText extends StatelessWidget {
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        const Text(
-          "joy!",
+        Text(
+          text,
           style: TextStyle(
-            fontSize: 48, // text-4xl/5xl equivalent
+            fontSize: fontSize,
             fontWeight: FontWeight.bold,
             color: AppColors.bambooDark,
             fontFamily: 'Fredoka',
@@ -26,7 +34,7 @@ class JoyText extends StatelessWidget {
           right: 0,
           child: CustomPaint(
             size: const Size(double.infinity, 12),
-            painter: _SmilePainter(),
+            painter: _SmilePainter(borderColor: borderColor),
           ),
         ),
       ],
@@ -35,10 +43,12 @@ class JoyText extends StatelessWidget {
 }
 
 class _SmilePainter extends CustomPainter {
+  final Color borderColor;
+  _SmilePainter({required this.borderColor});
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.bambooGreen.withOpacity(0.5)
+      ..color = borderColor.withOpacity(0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;

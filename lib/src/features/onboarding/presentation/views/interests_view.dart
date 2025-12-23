@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:pandascroll/src/core/theme/app_theme.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
-import '../../../feed/presentation/views/feed_view.dart';
+
 import '../widgets/panda_button.dart';
+import 'goal_view.dart';
 
 class InterestsView extends StatefulWidget {
   const InterestsView({super.key});
@@ -69,10 +70,9 @@ class _InterestsViewState extends State<InterestsView> {
   ];
 
   void _onStartLearning() {
-    Navigator.pushAndRemoveUntil(
+    Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const FeedView()),
-      (route) => false,
+      MaterialPageRoute(builder: (context) => const GoalView()),
     );
   }
 
@@ -85,7 +85,7 @@ class _InterestsViewState extends State<InterestsView> {
     final bool canContinue = _selectedIds.length >= 3;
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.creamBg,
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -248,10 +248,10 @@ class _InterestsViewState extends State<InterestsView> {
           borderRadius: BorderRadius.circular(24),
           border: isSelected
               ? Border(
-                  top: BorderSide(color: Colors.black, width: 2),
-                  bottom: BorderSide(color: Colors.black, width: 4),
-                  left: BorderSide(color: Colors.black, width: 2),
-                  right: BorderSide(color: Colors.black, width: 2),
+                  top: BorderSide(color: AppColors.bambooDark, width: 2),
+                  bottom: BorderSide(color: AppColors.bambooDark, width: 6),
+                  left: BorderSide(color: AppColors.bambooDark, width: 2),
+                  right: BorderSide(color: AppColors.bambooDark, width: 2),
                 )
               : Border(
                   top: BorderSide(
@@ -260,7 +260,7 @@ class _InterestsViewState extends State<InterestsView> {
                   ),
                   bottom: BorderSide(
                     color: const Color.fromARGB(255, 223, 223, 223),
-                    width: 4,
+                    width: 6,
                   ),
                   left: BorderSide(
                     color: const Color.fromARGB(255, 223, 223, 223),

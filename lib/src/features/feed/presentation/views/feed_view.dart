@@ -73,14 +73,15 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   isPanelOpen: _isPanelOpen,
                   onOpenPanel: _openPanel,
                   onUpdateTitle: _updateTitle,
+                  onClosePanel: _closePanel,
                 )
               : const RoadmapView(),
 
           // Top Tabs
           Positioned(
             top: 0,
-            left: 24,
-            right: 24,
+            left: 16,
+            right: 16,
             child: SafeArea(
               child: Stack(
                 alignment: Alignment.topCenter,
@@ -165,9 +166,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: Colors.black, width: 2),
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black45, blurRadius: 0, offset: Offset(0, 4)),
         ],
       ),
       child: Row(
@@ -178,9 +179,16 @@ class _FeedViewState extends ConsumerState<FeedView> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.primaryBrand,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.pandaBlack, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: const Center(
               child: Icon(Icons.spa, color: AppColors.pandaBlack, size: 18),
@@ -196,8 +204,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
               // Header Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     "DAILY PANDA GOAL",
                     style: TextStyle(
                       color: Colors.black,
@@ -207,15 +215,28 @@ class _FeedViewState extends ConsumerState<FeedView> {
                       shadows: [Shadow(color: Colors.black, blurRadius: 2)],
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Text(
-                    "3 / 5",
-                    style: TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 2)],
-                    ),
+                  const SizedBox(width: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          "3/5",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            shadows: [
+                              Shadow(color: Colors.black, blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -224,11 +245,11 @@ class _FeedViewState extends ConsumerState<FeedView> {
               // Progress Bar
               Container(
                 width: 120, // Fixed width for badge consistency
-                height: 6,
+                height: 10,
                 decoration: BoxDecoration(
                   color: Colors.black45,
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.white24, width: 0.5),
+                  border: Border.all(color: Colors.black, width: 2),
                 ),
                 child: Stack(
                   children: [
@@ -245,6 +266,30 @@ class _FeedViewState extends ConsumerState<FeedView> {
                               blurRadius: 4,
                             ),
                           ],
+
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: const Alignment(-0.8, 1.0),
+                            tileMode: TileMode.repeated,
+                            transform: const GradientRotation(3.14 / 2),
+                            stops: const [0.0, 0.5, 0.5, 1.0],
+                            colors: [
+                              const Color.fromARGB(
+                                255,
+                                186,
+                                111,
+                                6,
+                              ), // Stripe Color
+                              const Color.fromARGB(
+                                255,
+                                186,
+                                111,
+                                6,
+                              ), // Stripe Color
+                              AppColors.accent,
+                              AppColors.accent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -264,12 +309,14 @@ class _VideoPageFeed extends ConsumerWidget {
   final bool isPanelOpen;
   final Function(String, Widget) onOpenPanel;
   final Function(String) onUpdateTitle;
+  final Function() onClosePanel;
 
   const _VideoPageFeed({
     required this.pageController,
     required this.isPanelOpen,
     required this.onOpenPanel,
     required this.onUpdateTitle,
+    required this.onClosePanel,
   });
 
   @override
@@ -300,6 +347,17 @@ class _VideoPageFeed extends ConsumerWidget {
               videoId: videos[index].id,
               audioUrl: videos[index].audioUrl,
               onTitleChanged: onUpdateTitle,
+              onClose: () => onClosePanel(),
+              onNextVideo: () {
+                onClosePanel();
+                if (index < videos.length - 1) {
+                  pageController.animateToPage(
+                    index + 1,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
             ),
           ),
           onShowComments: () =>

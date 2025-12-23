@@ -77,7 +77,7 @@ class _CaptionContainer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: ShapeDecoration(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.white,
         shape: ContinuousRectangleBorder(
           borderRadius: BorderRadius.circular(32),
         ),
@@ -100,9 +100,15 @@ class _CaptionContainer extends StatelessWidget {
           if (translation.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
+
               child: Text(
                 translation,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+
+                style: TextStyle(
+                  color: Colors.black45,
+                  fontSize: 18,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
             ),
         ],
@@ -134,16 +140,9 @@ class _HighlightableWord extends StatelessWidget {
           return Text(
             word.word,
             style: TextStyle(
-              color: isHighlighted ? AppColors.primaryBrand : Colors.white,
-              fontSize: 18,
+              color: isHighlighted ? AppColors.bambooDark : Colors.black45,
+              fontSize: 21,
               fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  blurRadius: 4,
-                  color: Colors.black.withOpacity(0.5),
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
           );
         },

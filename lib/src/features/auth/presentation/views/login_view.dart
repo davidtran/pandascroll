@@ -1,12 +1,44 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../onboarding/presentation/views/preferences_view.dart';
+import '../../../onboarding/presentation/widgets/landing_background_painter.dart';
 import '../controllers/auth_controller.dart';
+import '../widgets/login_hero.dart';
+import '../widgets/login_welcome_text.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class LoginView extends ConsumerWidget {
   const LoginView({super.key});
+
+  Widget _buildSquareBtn(BuildContext context, IconData icon) {
+    return GestureDetector(
+      onTap: () {
+        if (icon == Icons.arrow_back) Navigator.of(context).pop();
+      },
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[100]!, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              offset: const Offset(0, 4),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Icon(icon, color: AppColors.textMain, size: 24),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,127 +56,70 @@ class LoginView extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+      backgroundColor: AppColors.funBg,
+      body: CustomPaint(
+        painter: LandingBackgroundPainter(),
+        child: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(),
-
-              // Logo / Branding
-              Container(
-                width: 120,
-                height: 120,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
                 ),
-                child: const Center(
-                  child: Text("🐼", style: TextStyle(fontSize: 64)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [_buildSquareBtn(context, Icons.arrow_back)],
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                "Welcome to PandaScroll",
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              // Hero
+              Expanded(child: const Center(child: LoginHero())),
+
+              // Text & Buttons Container
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  children: [
+                    const LoginWelcomeText(),
+                    const SizedBox(height: 32),
+
+                    if (authState.isLoading)
+                      const CircularProgressIndicator(
+                        color: AppColors.bambooGreen,
+                      )
+                    else ...[
+                      if (Platform.isIOS)
+                        PandaButton(
+                          text: "Continue with Apple",
+                          // Using Text widget as icon placeholder since no assets/fonts available yet.
+                          leading: const FaIcon(
+                            FontAwesomeIcons.apple,
+                            color: Colors.white,
+                          ),
+                          backgroundColor: AppColors.pandaBlack,
+                          textColor: Colors.white,
+                          shadowColor: const Color.fromARGB(255, 67, 67, 67),
+                          onPressed: () =>
+                              ref.read(authProvider.notifier).signInWithApple(),
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      PandaButton(
+                        text: "Continue with Google",
+                        leading: const FaIcon(
+                          FontAwesomeIcons.google,
+                          color: AppColors.pandaBlack,
+                        ),
+                        backgroundColor: Colors.white,
+                        textColor: AppColors.pandaBlack,
+                        onPressed: () =>
+                            ref.read(authProvider.notifier).signInWithGoogle(),
+                      ),
+                    ],
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                "Learn languages the fun way!",
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: AppColors.textLight),
-                textAlign: TextAlign.center,
-              ),
-
-              const Spacer(),
-
-              if (authState.isLoading)
-                const CircularProgressIndicator(color: AppColors.primaryBrand)
-              else ...[
-                // Google Button
-                _SocialLoginButton(
-                  text: "Continue with Google",
-                  icon: "🇬", // Placeholder for Google Icon
-                  backgroundColor: Colors.white,
-                  textColor: Colors.black,
-                  onPressed: () =>
-                      ref.read(authProvider.notifier).signInWithGoogle(),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // Apple Button
-                _SocialLoginButton(
-                  text: "Continue with Apple",
-                  icon: "",
-                  backgroundColor: Colors.black,
-                  textColor: Colors.white,
-                  onPressed: () =>
-                      ref.read(authProvider.notifier).signInWithApple(),
-                ),
-              ],
-
-              const SizedBox(height: AppSpacing.xl),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialLoginButton extends StatelessWidget {
-  final String text;
-  final String icon;
-  final Color backgroundColor;
-  final Color textColor;
-  final VoidCallback onPressed;
-
-  const _SocialLoginButton({
-    required this.text,
-    required this.icon,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: textColor,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.button),
-            side: backgroundColor == Colors.white
-                ? const BorderSide(color: Color(0xFFE0E0E0))
-                : BorderSide.none,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(icon, style: TextStyle(fontSize: 24, color: textColor)),
-            const SizedBox(width: AppSpacing.md),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-          ],
         ),
       ),
     );

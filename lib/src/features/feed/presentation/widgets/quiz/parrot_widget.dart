@@ -12,21 +12,30 @@ import '../../../domain/models/exercise_model.dart';
 class ParrotWidget extends StatefulWidget {
   final ParrotData data;
   final VoidCallback onCorrect;
+  final VoidCallback? onWrong;
   final String audioUrl;
 
   const ParrotWidget({
     super.key,
     required this.data,
     required this.onCorrect,
+    required this.onWrong,
     required this.audioUrl,
+    required this.onPlayAudio,
+    required this.onPauseAudio,
+    required this.audioStateStream,
   });
+  final Future<void> Function({required double start, required double end})
+  onPlayAudio;
+  final Future<void> Function() onPauseAudio;
+  final Stream<PlayerState> audioStateStream;
 
   @override
   State<ParrotWidget> createState() => _ParrotWidgetState();
 }
 
 class _ParrotWidgetState extends State<ParrotWidget> {
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // final AudioPlayer _audioPlayer = AudioPlayer(); // Removed
   final Record _audioRecorder = Record();
 
   bool _isPlaying = false;
@@ -39,47 +48,67 @@ class _ParrotWidgetState extends State<ParrotWidget> {
   @override
   void initState() {
     super.initState();
-    _initAudio();
-  }
-
-  Future<void> _initAudio() async {
-    try {
-      if (widget.data.audioStart < widget.data.audioEnd) {
-        await _audioPlayer.setAudioSource(
-          ClippingAudioSource(
-            start: Duration(
-              milliseconds: (widget.data.audioStart * 1000).toInt(),
-            ),
-            end: Duration(milliseconds: (widget.data.audioEnd * 1000).toInt()),
-            child: AudioSource.uri(Uri.parse(widget.audioUrl)),
-          ),
-        );
+    // _initAudio(); // Removed
+    widget.audioStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying =
+              state.playing &&
+              state.processingState != ProcessingState.completed &&
+              state.processingState != ProcessingState.idle;
+        });
       }
-    } catch (e) {
-      debugPrint("Error initializing audio: $e");
-    }
+    });
   }
 
   @override
+  void didUpdateWidget(ParrotWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.data != oldWidget.data) {
+      _resetState();
+      // _initAudio(); // Removed
+    }
+  }
+
+  void _resetState() {
+    setState(() {
+      _isRecording = false;
+      _isProcessing = false;
+      _transcribedText = null;
+      _score = null;
+      _feedbackMessage = null;
+      // _isPlaying handled by stream
+    });
+    // _audioPlayer.stop(); // Handled by parent pause if needed
+    widget.onPauseAudio();
+  }
+
+  // Future<void> _initAudio() async { ... } // Removed
+
+  @override
   void dispose() {
-    _audioPlayer.dispose();
+    // _audioPlayer.dispose(); // Removed
     _audioRecorder.dispose();
     super.dispose();
   }
 
   Future<void> _playAudio() async {
     if (_isPlaying) {
-      await _audioPlayer.stop();
-      setState(() => _isPlaying = false);
+      await widget.onPauseAudio();
     } else {
-      setState(() => _isPlaying = true);
-      await _audioPlayer.seek(Duration.zero);
-      await _audioPlayer.play();
-      setState(() => _isPlaying = false);
+      await widget.onPlayAudio(
+        start: widget.data.audioStart,
+        end: widget.data.audioEnd,
+      );
     }
   }
 
   Future<void> _toggleRecording() async {
+    // Stop audio if recording starts
+    if (!_isRecording) {
+      await widget.onPauseAudio();
+    }
+
     if (_isRecording) {
       await _stopRecording();
     } else {
@@ -92,6 +121,9 @@ class _ParrotWidgetState extends State<ParrotWidget> {
       if (await _audioRecorder.hasPermission()) {
         final directory = await getApplicationDocumentsDirectory();
         final path = '${directory.path}/recording.m4a';
+
+        // Check if file exists and delete it? Record usually overwrites
+        // File(path).delete();
 
         await _audioRecorder.start(path: path, encoder: AudioEncoder.aacLc);
         setState(() {
@@ -131,12 +163,17 @@ class _ParrotWidgetState extends State<ParrotWidget> {
       );
 
       final text = data['text'] as String? ?? '';
+      _transcribedText = text; // Store for debugging/display if needed
       final score = _calculateScore(text, widget.data.sentenceText);
+      _score = score;
 
-      setState(() {
-        _transcribedText = text;
-        _score = score;
-      });
+      print('score: $score');
+
+      if (score > 0.5) {
+        widget.onCorrect();
+      } else {
+        widget.onWrong?.call();
+      }
     } catch (e) {
       setState(() {
         _feedbackMessage = "Error: $e";
@@ -204,18 +241,20 @@ class _ParrotWidgetState extends State<ParrotWidget> {
                 _isPlaying
                     ? Icons.stop_circle_rounded
                     : Icons.volume_up_rounded,
-                size: 48,
-                color: AppColors.primaryBrand,
+                size: 32,
+                color: AppColors.pandaBlack,
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            Text(
-              widget.data.sentenceText,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textMain,
+            Flexible(
+              child: Text(
+                widget.data.sentenceText,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMain,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -232,62 +271,30 @@ class _ParrotWidgetState extends State<ParrotWidget> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: (_isRecording ? Colors.red : AppColors.primaryBrand)
+                  color: (_isRecording ? Colors.red : AppColors.textLight)
                       .withOpacity(0.3),
-                  blurRadius: 12,
-                  spreadRadius: 4,
+                  blurRadius: 0,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 2,
                 ),
               ],
             ),
-            child: Icon(
-              _isRecording ? Icons.stop : Icons.mic,
-              size: 48,
-              color: Colors.white,
-            ),
+            child: _isProcessing
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    size: 48,
+                    color: Colors.white,
+                  ),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-
-        if (_isProcessing)
-          const CircularProgressIndicator(color: AppColors.primaryBrand),
-
-        if (_transcribedText != null) ...[
-          const SizedBox(height: AppSpacing.md),
-
-          if (_score != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              "Score: ${(_score! * 100).toInt()}%",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: _score! > 0.8 ? Colors.green : Colors.orange,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ElevatedButton(
-              onPressed: widget.onCorrect,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBrand,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
-              ),
-              child: const Text(
-                "Continue",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ],
-
-        if (_feedbackMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: Text(
-              _feedbackMessage!,
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
+        const SizedBox(height: 10),
+        Text(
+          'Tap to speak',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textLight),
+        ),
       ],
     );
   }

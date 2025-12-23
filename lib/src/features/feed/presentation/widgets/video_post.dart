@@ -194,30 +194,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           child: Container(color: Colors.transparent),
         ),
 
-        // 2. Top Gradient (Custom height)
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 150, // Slightly more than 50 for smooth fade, or 50 if strict
-          child: IgnorePointer(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black,
-                    Colors.black.withOpacity(0.7),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ),
-              ),
-            ),
-          ),
-        ),
-
         // 3. Bottom Gradient (For text readability)
         Positioned(
           bottom: 0,
@@ -257,10 +233,9 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         // Actions Column (Right Side)
         Positioned(
           right: 16,
-          bottom: 110, // Adjusted to sit above bottom nav area
+          bottom: 100, // Adjusted to sit above button
           child: Column(
             children: [
-              const SizedBox(height: 16),
               // Profile
               Stack(
                 clipBehavior: Clip.none,
@@ -314,12 +289,12 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         Positioned(
           left: 16,
           right: 80, // Space for actions
-          bottom: 24, // Bottom padding
+          bottom: 100, // aligned with actions bottom
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Captions Overlay (Moved here)
+              // Captions Overlay
               if (showCaptions)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
@@ -339,7 +314,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                   widget.video.title,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16, // Big text
+                    fontSize: 16,
                     fontWeight: FontWeight.w100,
                     height: 1.1,
                     shadows: [
@@ -351,33 +326,32 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                     ],
                   ),
                 ),
+            ],
+          ),
+        ),
 
-              const SizedBox(height: 10),
-
-              // Start Exercise Button
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: widget.hideContent ? 0.0 : 1.0,
-                child: IgnorePointer(
-                  ignoring: widget.hideContent,
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: PandaButton(
-                      text: "START EXERCISE",
-                      onPressed: widget.onStartQuiz,
-                      icon: Icons.pets,
-                      backgroundColor: AppColors.accent, // Orange
-                      borderColor: AppColors.accent,
-
-                      shadowColor: const Color(
-                        0xFFB45309,
-                      ), // Dark orange shadow
-                      // Provide font override if needed or rely on default
-                    ),
-                  ),
+        // 4. Start Exercise Button (Bottom Fixed)
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 24,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: widget.hideContent ? 0.0 : 1.0,
+            child: IgnorePointer(
+              ignoring: widget.hideContent,
+              child: SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: PandaButton(
+                  text: "START EXERCISE",
+                  onPressed: widget.onStartQuiz,
+                  icon: Icons.pets,
+                  borderColor: Colors.black,
+                  shadowColor: const Color.fromARGB(255, 38, 38, 38),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ],

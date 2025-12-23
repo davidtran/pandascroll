@@ -24,39 +24,51 @@ class InteractionPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Handle Bar
-          Center(
+          // Handle Bar with Swipe to Close
+          GestureDetector(
+            onVerticalDragEnd: (details) {
+              if (details.primaryVelocity != null &&
+                  details.primaryVelocity! > 300) {
+                onClose();
+              }
+            },
+            behavior: HitTestBehavior.translucent,
             child: Container(
-              margin: const EdgeInsets.only(top: AppSpacing.sm),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
             ),
           ),
 
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: onClose,
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
+          // Header removed (moved to children)
+          // Padding(
+          //   padding: const EdgeInsets.all(AppSpacing.md),
+          //   child: Row(
+          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //     children: [
+          //       Text(
+          //         title,
+          //         style: Theme.of(
+          //           context,
+          //         ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          //       ),
+          //       IconButton(
+          //         icon: const Icon(Icons.close_rounded),
+          //         onPressed: onClose,
+          //       ),
+          //     ],
+          //   ),
+          // ),
+          // const Divider(height: 1),
 
           // Content
           Expanded(child: child),

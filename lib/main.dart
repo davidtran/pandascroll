@@ -9,6 +9,7 @@ import 'src/features/auth/presentation/controllers/auth_controller.dart';
 import 'src/features/feed/presentation/views/feed_view.dart';
 
 import 'src/core/utils/navigation.dart';
+import 'src/core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,8 @@ void main() async {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkdGptd3R0c3FsYnN0cHZtemphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4ODk2NDgsImV4cCI6MjA4MTQ2NTY0OH0.FDURrsLWDC6zDF8XA4wJNDDs-RjSU3gAmkR4S1N7L1E',
   );
 
+  await NotificationService().init();
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -27,11 +30,13 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'PandaScroll',
       theme: AppTheme.lightTheme,
-      home: const LandingView(),
+      home: LandingView(),
       debugShowCheckedModeBanner: false,
     );
   }

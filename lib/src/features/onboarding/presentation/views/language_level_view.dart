@@ -52,7 +52,7 @@ class _LanguageLevelViewState extends State<LanguageLevelView> {
     const Color textMain = AppColors.textMain;
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.creamBg,
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -82,7 +82,7 @@ class _LanguageLevelViewState extends State<LanguageLevelView> {
                             Container(
                               width: 75,
                               decoration: BoxDecoration(
-                                color: primaryColor,
+                                color: AppColors.primaryBrand,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                             ),
@@ -115,7 +115,7 @@ class _LanguageLevelViewState extends State<LanguageLevelView> {
                             TextSpan(
                               text: "Chinese",
                               style: TextStyle(
-                                color: primaryColor,
+                                color: AppColors.bambooDark,
                                 decoration: TextDecoration.underline,
                                 decorationStyle: TextDecorationStyle.wavy,
                                 decorationColor: Color(0xFFFFD336),

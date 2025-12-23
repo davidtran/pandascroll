@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../auth/presentation/views/login_view.dart';
 
 class LandingHeader extends StatelessWidget {
   const LandingHeader({super.key});
@@ -73,7 +74,10 @@ class LandingHeader extends StatelessWidget {
               child: InkWell(
                 borderRadius: BorderRadius.circular(30),
                 onTap: () {
-                  // TODO: Navigate to Sign In
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginView()),
+                  );
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(

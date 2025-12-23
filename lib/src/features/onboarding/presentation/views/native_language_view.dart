@@ -89,12 +89,13 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
 
   @override
   Widget build(BuildContext context) {
+    const Color creamBg = Color(0xFFFEFDF5);
     const Color bgLight = Color(0xFFF0FDF4); // bg-background-light
     const Color primaryColor = AppColors.bambooGreen; // 0xFF4ADE80
     const Color textMain = Color(0xFF1E293B); // text-main
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: creamBg,
       body: SafeArea(
         bottom: false,
         child: Stack(

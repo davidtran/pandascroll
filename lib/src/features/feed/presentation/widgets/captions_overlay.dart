@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/video_model.dart';
 
@@ -74,44 +75,47 @@ class _CaptionContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: ContinuousRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.start,
-            spacing: 4,
-            children: caption.words.map((word) {
-              return _HighlightableWord(
-                word: word,
-                currentTimeNotifier: currentTimeNotifier,
-                onTap: () => onWordTap(word.word),
-              );
-            }).toList(),
-          ),
-          if (translation.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
+    final shape = ContinuousRectangleBorder(
+      borderRadius: BorderRadius.circular(32),
+    );
 
-              child: Text(
-                translation,
-
-                style: TextStyle(
-                  color: Colors.black45,
-                  fontSize: 18,
-                  fontWeight: FontWeight.normal,
-                ),
+    return ClipPath(
+      clipper: ShapeBorderClipper(shape: shape),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: ShapeDecoration(color: Colors.black54, shape: shape),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                alignment: WrapAlignment.start,
+                spacing: 4,
+                children: caption.words.map((word) {
+                  return _HighlightableWord(
+                    word: word,
+                    currentTimeNotifier: currentTimeNotifier,
+                    onTap: () => onWordTap(word.word),
+                  );
+                }).toList(),
               ),
-            ),
-        ],
+              if (translation.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    translation,
+                    style: const TextStyle(
+                      color: Colors.white30,
+                      fontSize: 18,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -140,9 +144,9 @@ class _HighlightableWord extends StatelessWidget {
           return Text(
             word.word,
             style: TextStyle(
-              color: isHighlighted ? AppColors.bambooDark : Colors.black45,
-              fontSize: 21,
-              fontWeight: FontWeight.bold,
+              color: isHighlighted ? AppColors.bambooDark : Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
           );
         },

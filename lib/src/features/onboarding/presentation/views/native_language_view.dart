@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../providers/onboarding_provider.dart';
 import 'target_language_view.dart';
 import '../widgets/panda_button.dart';
 import '../widgets/selectable_option_card.dart';
 
-class NativeLanguageView extends StatefulWidget {
+class NativeLanguageView extends ConsumerWidget {
   const NativeLanguageView({super.key});
 
-  @override
-  State<NativeLanguageView> createState() => _NativeLanguageViewState();
-}
-
-class _NativeLanguageViewState extends State<NativeLanguageView> {
-  String? _selectedLangCode;
-
   // Mock data as per design
-  final List<Map<String, String>> _suggestedLanguages = [
+  final List<Map<String, String>> _suggestedLanguages = const [
     {
       'code': 'en',
       'name': 'English',
@@ -33,7 +28,7 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
     },
   ];
 
-  final List<Map<String, String>> _allLanguages = [
+  final List<Map<String, String>> _allLanguages = const [
     {
       'code': 'fr',
       'name': 'French',
@@ -78,8 +73,9 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
     },
   ];
 
-  void _onContinue() {
-    if (_selectedLangCode != null) {
+  void _onContinue(BuildContext context, WidgetRef ref) {
+    final selectedLangCode = ref.read(onboardingProvider).nativeLanguage;
+    if (selectedLangCode != null) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const TargetLanguageView()),
@@ -88,7 +84,7 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const Color creamBg = Color(0xFFFEFDF5);
     const Color bgLight = Color(0xFFF0FDF4); // bg-background-light
     const Color primaryColor = AppColors.bambooGreen; // 0xFF4ADE80
@@ -126,7 +122,7 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "Select your native language so Panpan can help you!",
+                        "Select your native language so langrot can help you!",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textLight,
@@ -139,43 +135,6 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
                   ),
                 ),
 
-                // Search Bar
-                // Padding(
-                //   padding: const EdgeInsets.symmetric(horizontal: 24),
-                //   child: Container(
-                //     height: 56,
-                //     padding: const EdgeInsets.symmetric(horizontal: 16),
-                //     decoration: BoxDecoration(
-                //       color: Colors.white,
-                //       borderRadius: BorderRadius.circular(28),
-                //       border: Border.all(color: Colors.grey[200]!, width: 2),
-                //       boxShadow: [
-                //         BoxShadow(
-                //           color: Colors.black.withOpacity(0.05),
-                //           offset: const Offset(0, 2),
-                //           blurRadius: 2,
-                //         ),
-                //       ],
-                //     ),
-
-                //     child: const Row(
-                //       children: [
-                //         Icon(Icons.search, color: Colors.grey),
-                //         SizedBox(width: 12),
-                //         Text(
-                //           "Search languages...",
-                //           style: TextStyle(
-                //             color: Colors.grey,
-                //             fontSize: 18,
-                //             fontWeight: FontWeight.bold,
-                //           ),
-                //         ),
-                //       ],
-                //     ),
-                //   ),
-                // ),
-                // const SizedBox(height: 24),
-
                 // Language List
                 Expanded(
                   child: ListView(
@@ -183,14 +142,16 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
                     children: [
                       // Suggested
                       _buildSectionHeader("Suggested", Icons.star_rounded),
-                      ..._suggestedLanguages.map((l) => _buildLanguageTile(l)),
+                      ..._suggestedLanguages.map(
+                        (l) => _buildLanguageTile(l, ref),
+                      ),
                       const SizedBox(height: 24),
                       // All Languages
                       _buildSectionHeader(
                         "All Languages",
                         Icons.public_rounded,
                       ),
-                      ..._allLanguages.map((l) => _buildLanguageTile(l)),
+                      ..._allLanguages.map((l) => _buildLanguageTile(l, ref)),
                     ],
                   ),
                 ),
@@ -219,7 +180,7 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
                 child: SafeArea(
                   child: PandaButton(
                     text: "Continue",
-                    onPressed: _onContinue,
+                    onPressed: () => _onContinue(context, ref),
                     icon: Icons.arrow_forward_rounded,
                   ),
                 ),
@@ -272,8 +233,9 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
     );
   }
 
-  Widget _buildLanguageTile(Map<String, String> lang) {
-    final bool isSelected = _selectedLangCode == lang['code'];
+  Widget _buildLanguageTile(Map<String, String> lang, WidgetRef ref) {
+    final currentCode = ref.watch(onboardingProvider).nativeLanguage;
+    final bool isSelected = currentCode == lang['code'];
     final Color primary = AppColors.bambooGreen;
 
     return SelectableOptionCard(
@@ -282,9 +244,7 @@ class _NativeLanguageViewState extends State<NativeLanguageView> {
 
       isSelected: isSelected,
       onTap: () {
-        setState(() {
-          _selectedLangCode = lang['code'];
-        });
+        ref.read(onboardingProvider.notifier).setNativeLanguage(lang['code']!);
       },
     );
   }

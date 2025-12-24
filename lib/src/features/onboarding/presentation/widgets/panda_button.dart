@@ -14,6 +14,7 @@ class PandaButton extends StatefulWidget {
   final Color? shadowColor;
   final double? width;
   final Widget? leading;
+  final bool disabled;
 
   const PandaButton({
     super.key,
@@ -29,6 +30,7 @@ class PandaButton extends StatefulWidget {
     this.shadowColor,
     this.width = double.infinity,
     this.leading,
+    this.disabled = false,
   });
 
   @override
@@ -41,10 +43,16 @@ class _PandaButtonState extends State<PandaButton> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.onPressed,
+      onTapDown: widget.disabled
+          ? null
+          : (_) => setState(() => _isPressed = true),
+      onTapUp: widget.disabled
+          ? null
+          : (_) => setState(() => _isPressed = false),
+      onTapCancel: widget.disabled
+          ? null
+          : () => setState(() => _isPressed = false),
+      onTap: widget.disabled ? null : widget.onPressed,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         height: widget.height,
@@ -83,7 +91,7 @@ class _PandaButtonState extends State<PandaButton> {
               ),
             ),
             if (widget.icon != null) ...[
-              const SizedBox(width: AppSpacing.sm),
+              if (widget.text.isNotEmpty) const SizedBox(width: AppSpacing.sm),
               Icon(widget.icon, color: widget.textColor, size: 28),
             ],
           ],

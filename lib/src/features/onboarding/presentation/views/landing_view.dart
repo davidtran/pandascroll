@@ -87,7 +87,7 @@ class LandingView extends StatelessWidget {
                                       scale: 0.85,
                                       child: const FloatingBadge(
                                         emoji: "🇨🇳",
-                                        text: "Chinese",
+                                        text: "chinese",
                                         backgroundColor: Color(0xFFFEE2E2),
                                         textColor: Color(0xFF991B1B),
                                         angle: -6,
@@ -99,12 +99,12 @@ class LandingView extends StatelessWidget {
                                     right:
                                         (screenWidth - finalPhoneWidth) / 2 -
                                         40,
-                                    bottom: finalPhoneHeight * 0.3,
+                                    bottom: finalPhoneHeight * 0.2,
                                     child: Transform.scale(
                                       scale: 0.85,
                                       child: const FloatingBadge(
                                         emoji: "🇬🇧",
-                                        text: "English",
+                                        text: "english",
                                         backgroundColor: Color(0xFFDBEAFE),
                                         textColor: Color(0xFF1E40AF),
                                         angle: 6,
@@ -131,7 +131,7 @@ class LandingView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             const Text(
-                              "Learn with ",
+                              "learn with ",
                               style: TextStyle(
                                 fontSize: 36, // text-4xl
                                 fontWeight: FontWeight.w700,
@@ -140,12 +140,12 @@ class LandingView extends StatelessWidget {
                                 height: 1.1,
                               ),
                             ),
-                            const JoyText(text: "Joy"),
+                            const JoyText(text: "joy", fontSize: 40),
                           ],
                         ),
                         const SizedBox(height: AppSpacing.md),
                         const Text(
-                          "Join our panda friend to master Chinese & English through fun videos!",
+                          "join our panda friend to master chinese & english through fun videos!",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
@@ -161,7 +161,7 @@ class LandingView extends StatelessWidget {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 380),
                           child: PandaButton(
-                            text: "Start Adventure",
+                            text: "start adventure",
                             icon: Icons.pets,
                             onPressed: () {
                               Navigator.push(

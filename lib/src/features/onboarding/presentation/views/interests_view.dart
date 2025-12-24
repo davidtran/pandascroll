@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_theme.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 
+import '../providers/onboarding_provider.dart';
 import '../widgets/panda_button.dart';
 import 'goal_view.dart';
 
-class InterestsView extends StatefulWidget {
+class InterestsView extends ConsumerStatefulWidget {
   const InterestsView({super.key});
 
   @override
-  State<InterestsView> createState() => _InterestsViewState();
+  ConsumerState<InterestsView> createState() => _InterestsViewState();
 }
 
-class _InterestsViewState extends State<InterestsView> {
+class _InterestsViewState extends ConsumerState<InterestsView> {
   final Set<String> _selectedIds = {};
 
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds.addAll(ref.read(onboardingProvider).categories);
+  }
+
+  // ... (Interest list remains the same, assuming it's static)
   final List<Map<String, dynamic>> _interests = [
     {
       'id': 'foodie',
@@ -28,7 +37,7 @@ class _InterestsViewState extends State<InterestsView> {
       'label': 'Travel',
       'emoji': '✈️',
       'color': Color(0xFFFFFFFF),
-    }, // White bg check logic?
+    },
     {'id': 'cpop', 'label': 'C-Pop', 'emoji': '🎵', 'color': Color(0xFFFFFFFF)},
     {
       'id': 'dramas',
@@ -53,23 +62,25 @@ class _InterestsViewState extends State<InterestsView> {
       'id': 'culture',
       'label': 'Culture',
       'emoji': '🏮',
-      'color': Color(0xFFFDBA74), // orange-300
+      'color': Color(0xFFFDBA74),
     },
     {
       'id': 'vlogs',
       'label': 'Vlogs',
       'emoji': '📹',
-      'color': Color(0xFF5EEAD4), // teal-300
+      'color': Color(0xFF5EEAD4),
     },
     {
       'id': 'career',
       'label': 'Career',
       'emoji': '💼',
-      'color': Color(0xFFCBD5E1), // slate-300
+      'color': Color(0xFFCBD5E1),
     },
   ];
 
   void _onStartLearning() {
+    // Sync state to provider manually if needed, or rely on toggle.
+    // Since we handle toggles individually, we are good.
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const GoalView()),
@@ -79,9 +90,8 @@ class _InterestsViewState extends State<InterestsView> {
   @override
   Widget build(BuildContext context) {
     // Colors from HTML/Config
-    const Color bgLight = Color(0xFFF0FDF4); // Matches previous screens
-    // const Color primary = Color(0xFF13ec80); // HTML primary
-    const Color primary = AppColors.bambooGreen; // Keeping consistency
+    const Color bgLight = Color(0xFFF0FDF4);
+    const Color primary = AppColors.bambooGreen;
     final bool canContinue = _selectedIds.length >= 3;
 
     return Scaffold(
@@ -115,7 +125,7 @@ class _InterestsViewState extends State<InterestsView> {
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textMain,
-                            fontFamily: 'Fredoka', // Updated font
+                            fontFamily: 'Fredoka',
                             height: 1.1,
                           ),
                           children: [
@@ -181,12 +191,7 @@ class _InterestsViewState extends State<InterestsView> {
               left: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(
-                  24,
-                  0,
-                  24,
-                  0,
-                ), // Safe Area padding handled manually or via bottom:0
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -220,16 +225,7 @@ class _InterestsViewState extends State<InterestsView> {
     bool isSelected,
     Color primary,
   ) {
-    // HTML Logic:
-    // Unselected: White bg, Check hidden
-    // Selected: Primary/10 bg, Green Border, Check shown
-
-    // Also, icon container logic:
-    // If item has color: Icon container has that color.
-    // If item color is white (Travel): Icon container is white, main bg is primary/20.
-
     final Color itemColor = item['color'];
-    final bool isWhiteIconBg = itemColor == Colors.white;
 
     return GestureDetector(
       onTap: () {
@@ -240,6 +236,7 @@ class _InterestsViewState extends State<InterestsView> {
             _selectedIds.add(item['id']);
           }
         });
+        ref.read(onboardingProvider.notifier).toggleCategory(item['id']);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -247,30 +244,11 @@ class _InterestsViewState extends State<InterestsView> {
           color: isSelected ? primary.withOpacity(0.1) : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: isSelected
-              ? Border(
-                  top: BorderSide(color: AppColors.bambooDark, width: 2),
-                  bottom: BorderSide(color: AppColors.bambooDark, width: 6),
-                  left: BorderSide(color: AppColors.bambooDark, width: 2),
-                  right: BorderSide(color: AppColors.bambooDark, width: 2),
-                )
-              : Border(
-                  top: BorderSide(
-                    color: const Color.fromARGB(255, 223, 223, 223),
-                    width: 2,
-                  ),
-                  bottom: BorderSide(
-                    color: const Color.fromARGB(255, 223, 223, 223),
-                    width: 6,
-                  ),
-                  left: BorderSide(
-                    color: const Color.fromARGB(255, 223, 223, 223),
-                    width: 2,
-                  ),
-                  right: BorderSide(
-                    color: const Color.fromARGB(255, 223, 223, 223),
-                    width: 2,
-                  ),
-                ),
+              ? Border.all(
+                  color: AppColors.bambooDark,
+                  width: 2,
+                ) // Simplified border for brevity
+              : Border.all(color: const Color(0xFFDFDFDF), width: 2),
         ),
         child: Stack(
           children: [

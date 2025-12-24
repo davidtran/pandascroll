@@ -166,9 +166,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.black, width: 2),
+        border: Border.all(color: Colors.black26, width: 2),
         boxShadow: const [
-          BoxShadow(color: Colors.black45, blurRadius: 0, offset: Offset(0, 4)),
+          BoxShadow(color: Colors.white54, blurRadius: 0, offset: Offset(2, 2)),
         ],
       ),
       child: Row(
@@ -363,6 +363,15 @@ class _VideoPageFeed extends ConsumerWidget {
           onShowComments: () =>
               onOpenPanel("Comments 💬", const CommentsPanel()),
           onShowPanel: onOpenPanel,
+          onSkip: () {
+            if (index < videos.length - 1) {
+              pageController.animateToPage(
+                index + 1,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOut,
+              );
+            }
+          },
         );
       },
     );

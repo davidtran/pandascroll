@@ -69,11 +69,11 @@ class _FloatingBadgeState extends State<FloatingBadge>
               decoration: BoxDecoration(
                 color: widget.backgroundColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white, width: 4),
+                border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    offset: const Offset(0, 4),
+                    color: Colors.black45,
+                    offset: const Offset(4, 4),
                     blurRadius: 0,
                   ),
                 ],

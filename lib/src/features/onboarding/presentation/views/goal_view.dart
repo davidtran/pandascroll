@@ -1,33 +1,78 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
-import '../widgets/panda_button.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/presentation/views/login_view.dart';
 import '../../../feed/presentation/views/feed_view.dart';
+import '../../../profile/data/profile_repository.dart';
+import '../providers/onboarding_provider.dart';
+import '../widgets/panda_button.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-class GoalView extends StatefulWidget {
+class GoalView extends ConsumerStatefulWidget {
   const GoalView({super.key});
 
   @override
-  State<GoalView> createState() => _GoalViewState();
+  ConsumerState<GoalView> createState() => _GoalViewState();
 }
 
-class _GoalViewState extends State<GoalView> {
+class _GoalViewState extends ConsumerState<GoalView> {
   double _currentSliderValue = 5;
 
   int get _videoCount => _currentSliderValue.round();
 
   Future<void> _commitGoal() async {
-    final notificationService = NotificationService();
-    await notificationService.requestPermissions();
-    await notificationService.scheduleDailyReminders();
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      final notificationService = NotificationService();
+      await notificationService.requestPermissions();
+      await notificationService.scheduleDailyReminders();
+    }
 
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const FeedView()),
-        (route) => false,
-      );
+    final isLoggedIn = ref.read(authProvider).value ?? false;
+
+    if (isLoggedIn) {
+      // User likely already logged in (e.g. from previous session or skipped login earlier?)
+      // We save their profile choices.
+      await _saveProfileAndNavigate();
+    } else {
+      // Go to Login to finish setup
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginView()),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfileAndNavigate() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        final onboardingState = ref.read(onboardingProvider);
+        await ref
+            .read(profileRepositoryProvider)
+            .updateProfile(userId, onboardingState);
+      }
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const FeedView()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving profile: $e')));
+      }
     }
   }
 

@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
-import '../../../auth/presentation/views/login_view.dart';
+import '../providers/onboarding_provider.dart';
 import '../widgets/panda_button.dart';
 import '../widgets/selectable_option_card.dart';
 import 'language_level_view.dart';
 
-class TargetLanguageView extends StatefulWidget {
+class TargetLanguageView extends ConsumerStatefulWidget {
   const TargetLanguageView({super.key});
 
   @override
-  State<TargetLanguageView> createState() => _TargetLanguageViewState();
+  ConsumerState<TargetLanguageView> createState() => _TargetLanguageViewState();
 }
 
-class _TargetLanguageViewState extends State<TargetLanguageView> {
-  String? _targetLangId = 'zh'; // Auto-select Chinese
+class _TargetLanguageViewState extends ConsumerState<TargetLanguageView> {
+  String? _targetLangId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with provider value or default to 'zh'
+    _targetLangId = ref.read(onboardingProvider).targetLanguage ?? 'zh';
+  }
 
   // Updated to use URL images as per new design spec
   final List<Map<String, dynamic>> _targetLanguages = [
@@ -61,6 +69,9 @@ class _TargetLanguageViewState extends State<TargetLanguageView> {
   ];
 
   void _onStartAdventure() {
+    if (_targetLangId != null) {
+      ref.read(onboardingProvider.notifier).setTargetLanguage(_targetLangId!);
+    }
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const LanguageLevelView()),

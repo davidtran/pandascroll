@@ -40,7 +40,7 @@ class LandingHeader extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               const Text(
-                "Langrot",
+                "langrot",
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w700,
@@ -85,7 +85,7 @@ class LandingHeader extends StatelessWidget {
                     vertical: AppSpacing.sm,
                   ),
                   child: const Text(
-                    "Sign In",
+                    "sign in",
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

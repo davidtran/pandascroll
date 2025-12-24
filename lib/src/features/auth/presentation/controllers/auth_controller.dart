@@ -20,6 +20,15 @@ class AuthController extends AsyncNotifier<bool> {
     return session != null;
   }
 
+  Future<void> signInAnonymously() async {
+    state = const AsyncValue.loading();
+    try {
+      await Supabase.instance.client.auth.signInAnonymously();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   Future<void> signInWithGoogle() async {
     state = const AsyncValue.loading();
     try {
@@ -77,7 +86,6 @@ class AuthController extends AsyncNotifier<bool> {
         'id': user.id,
         'level': level,
         'categories': categories,
-        'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e, st) {
       // If we fail, just propagate for UI to show

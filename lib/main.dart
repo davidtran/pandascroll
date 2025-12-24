@@ -36,7 +36,11 @@ class MyApp extends ConsumerWidget {
       navigatorKey: navigatorKey,
       title: 'PandaScroll',
       theme: AppTheme.lightTheme,
-      home: LandingView(),
+      home: authState.when(
+        data: (isAuthenticated) => isAuthenticated ? FeedView() : LandingView(),
+        error: (error, stackTrace) => LandingView(),
+        loading: () => LandingView(),
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

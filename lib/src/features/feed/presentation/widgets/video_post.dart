@@ -6,10 +6,12 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/video_model.dart';
 import '../../domain/models/dictionary_model.dart';
-import '../../../onboarding/presentation/widgets/panda_button.dart'; // Import PandaButton
+import '../../../onboarding/presentation/widgets/panda_button.dart';
 import 'captions_overlay.dart';
 import 'dictionary_panel.dart';
 import 'players/tiktok_player.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'players/youtube_player.dart';
 
 class VideoPost extends ConsumerStatefulWidget {
@@ -28,10 +30,12 @@ class VideoPost extends ConsumerStatefulWidget {
     required this.onStartQuiz,
     required this.onShowComments,
     required this.onShowPanel,
+    this.onSkip,
     this.onProgress, // Add progress callback if needed for top bar
   });
 
   final Function(double)? onProgress;
+  final VoidCallback? onSkip;
 
   @override
   ConsumerState<VideoPost> createState() => _VideoPostState();
@@ -44,9 +48,17 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   // Notifiers for UI updates
   final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
 
+  // Tutorial Keys
+  final GlobalKey _captionsKey = GlobalKey();
+  final GlobalKey _startExerciseKey = GlobalKey();
+  final GlobalKey _nextButtonKey = GlobalKey();
+
+  TutorialCoachMark? tutorialCoachMark;
+
   @override
   void dispose() {
     _stopTimer();
+    _currentTimeNotifier.removeListener(_tutorialListener);
     _currentTimeNotifier.dispose();
     super.dispose();
   }
@@ -64,19 +76,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   }
 
   void _handleWordTap(String word) async {
-    // If we want to pause when tapping a word, we might need a way to tell the child player to pause.
-    // However, the current architecture relies on passing 'isPlaying' down.
-    // If we change local state here, we might need to notify the player.
-    // Simply setting _isPaused here updates the UI (button), but to actually pause the player
-    // we need to change the 'isPlaying' prop passed to the child.
-    // BUT 'isPlaying' comes from the parent FeedView (based on index).
-
-    // Workaround: We can't easily force the child to pause via props if the parent controls isPlaying.
-    // But we can 'request' the parent to pause, or use a local override.
-    // For now, let's assume the user just wants the dictionary.
-    // Usually opening a dialog/panel covers the screen, effectively pausing or we want it to pause.
-
-    // To properly pause, we should probably update a local "override" variable that we combine with widget.isPlaying.
     setState(() {
       _isPaused = true;
     });
@@ -97,7 +96,12 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       if (mounted) {
         widget.onShowPanel(
           "Dictionary 📖",
-          DictionaryPanel(data: dictionaryData),
+          DictionaryPanel(
+            data: dictionaryData,
+            onClose: () {
+              Navigator.of(context).pop();
+            },
+          ),
         );
       }
     } catch (e) {
@@ -157,7 +161,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       if (_isPaused && mounted) setState(() => _isPaused = false);
     } else {
       _stopTimer();
-      if (!_isPaused && mounted) setState(() => _isPaused = true);
     }
   }
 
@@ -300,6 +303,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: RepaintBoundary(
                     child: CaptionsOverlay(
+                      key: _captionsKey,
                       currentTimeNotifier: _currentTimeNotifier,
                       captions: widget.video.captions,
                       onWordTap: _handleWordTap,
@@ -330,7 +334,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           ),
         ),
 
-        // 4. Start Exercise Button (Bottom Fixed)
+        // 4. Start Exercise Button + Skip Button (Bottom Fixed)
         Positioned(
           left: 16,
           right: 16,
@@ -340,16 +344,45 @@ class _VideoPostState extends ConsumerState<VideoPost> {
             opacity: widget.hideContent ? 0.0 : 1.0,
             child: IgnorePointer(
               ignoring: widget.hideContent,
-              child: SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: PandaButton(
-                  text: "START EXERCISE",
-                  onPressed: widget.onStartQuiz,
-                  icon: Icons.pets,
-                  borderColor: Colors.black,
-                  shadowColor: const Color.fromARGB(255, 38, 38, 38),
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 60,
+                      child: Container(
+                        key: _startExerciseKey,
+                        child: PandaButton(
+                          text: "START EXERCISE",
+                          onPressed: widget.onStartQuiz,
+                          disabled: _isTutorialShowing,
+                          icon: Icons.pets,
+                          borderColor: Colors.black,
+                          shadowColor: const Color.fromARGB(255, 38, 38, 38),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Skip Button
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Container(
+                      key: _nextButtonKey,
+                      child: PandaButton(
+                        text: "",
+                        icon: Icons.arrow_forward_rounded,
+                        onPressed: widget.onSkip ?? () {},
+                        disabled: _isTutorialShowing,
+                        backgroundColor: Colors.white,
+                        textColor: AppColors.pandaBlack,
+                        borderColor: Colors.black,
+                        width: 60,
+                        height: 60,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -527,5 +560,232 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         ),
       ),
     );
+  }
+
+  bool _isCheckingTutorial = false;
+  bool _shouldCheckTutorial = false; // Initialized in initState
+  bool _isTutorialShowing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkTutorialStatus();
+  }
+
+  Future<void> _checkTutorialStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        // If key exists, we don't need to check anymore.
+        _shouldCheckTutorial = !prefs.containsKey('has_shown_main_tutorial');
+        if (_shouldCheckTutorial) {
+          _currentTimeNotifier.addListener(_tutorialListener);
+        }
+      });
+    }
+  }
+
+  void _tutorialListener() async {
+    final currentTime = _currentTimeNotifier.value;
+    bool hasCaption = false;
+
+    // Check if any caption is currently active
+    for (final caption in widget.video.captions) {
+      if (caption.words.isNotEmpty) {
+        final start = caption.words.first.start;
+        final end = caption.words.last.end;
+        if (currentTime >= start && currentTime <= end) {
+          hasCaption = true;
+          break;
+        }
+      }
+    }
+
+    if (hasCaption) {
+      // 1. Found a caption, stop listening immediately
+      _currentTimeNotifier.removeListener(_tutorialListener);
+      _shouldCheckTutorial = false;
+
+      // 2. Pause the video
+      if (mounted) {
+        setState(() {
+          _isPaused = true;
+        });
+      }
+
+      // Delay slightly to ensure UI is updated (paused state) before overlay
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+
+      _createTutorial();
+
+      setState(() {
+        _isTutorialShowing = true;
+      });
+      tutorialCoachMark?.show(context: context);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_shown_main_tutorial', true);
+
+      if (mounted) {
+        setState(() {
+          _shouldCheckTutorial = false;
+        });
+      }
+    }
+  }
+
+  void _createTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: _createTargets(),
+      colorShadow: Colors.black,
+      textSkip: "SKIP",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: () {
+        print("finish");
+        setState(() {
+          _isTutorialShowing = false;
+          _isPaused = false;
+        });
+      },
+      onClickTarget: (target) {
+        if (target.identify == 'start_exercise') {
+          // widget.onStartQuiz();
+        } else if (target.identify == 'next_video') {
+          // widget.onSkip?.call();
+        }
+      },
+      onSkip: () {
+        print("skip");
+        setState(() {
+          _isTutorialShowing = false;
+          _isPaused = false;
+        });
+        return true;
+      },
+      onClickOverlay: (target) {
+        print('onClickOverlay: $target');
+      },
+    );
+  }
+
+  List<TargetFocus> _createTargets() {
+    List<TargetFocus> targets = [];
+
+    // 1. Captions
+    targets.add(
+      TargetFocus(
+        identify: "captions",
+        keyTarget: _captionsKey,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Tap to Look Up! 👆",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Tap on any Chinese character in the captions to see its meaning instantly.",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+        shape: ShapeLightFocus.RRect,
+        radius: 10,
+      ),
+    );
+
+    // 2. Start Exercise
+    targets.add(
+      TargetFocus(
+        identify: "start_exercise",
+        keyTarget: _startExerciseKey,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Ready to Practice? 🐼",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Tap here to start a quick quiz based on this video.",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+        shape: ShapeLightFocus.RRect,
+        radius: 10,
+      ),
+    );
+
+    // 3. Skip
+    targets.add(
+      TargetFocus(
+        identify: "next_video",
+        keyTarget: _nextButtonKey,
+        alignSkip: Alignment.topRight,
+        enableOverlayTab: true,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Not interested? ⏭️",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Tap here or swipe up to go to the next video.",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+        shape: ShapeLightFocus.RRect,
+        radius: 10,
+        paddingFocus: 20, // Check if available, otherwise just larger radius?
+      ),
+    );
+
+    return targets;
   }
 }

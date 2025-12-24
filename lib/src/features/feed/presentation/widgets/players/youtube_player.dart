@@ -1,7 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
-class YouTubePlayer extends StatefulWidget {
+// Conditionally import the correct implementation?
+// Or just import both and switch at runtime (assuming packages don't conflict at compile time).
+// Since both are normal packages, we can import them.
+import 'youtube_player_mobile.dart';
+import 'youtube_player_web.dart';
+
+class YouTubePlayer extends StatelessWidget {
   final String videoId;
   final bool isPlaying;
   final Function(double) onCurrentTime;
@@ -18,100 +24,23 @@ class YouTubePlayer extends StatefulWidget {
   });
 
   @override
-  State<YouTubePlayer> createState() => _YouTubePlayerState();
-}
-
-class _YouTubePlayerState extends State<YouTubePlayer> {
-  late YoutubePlayerController _controller;
-  bool _isPlayerReady = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeController();
-  }
-
-  void _initializeController() {
-    _controller = YoutubePlayerController(
-      initialVideoId: widget.videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: false,
-        mute: false,
-        hideControls: true,
-        disableDragSeek: true,
-        loop: true,
-        isLive: false,
-        forceHD: false,
-        enableCaption: false,
-      ),
-    )..addListener(_listener);
-  }
-
-  void _listener() {
-    if (_isPlayerReady && mounted && !_controller.value.isFullScreen) {
-      widget.onCurrentTime(_controller.value.position.inMilliseconds / 1000);
-
-      if (_controller.value.playerState == PlayerState.ended) {
-        widget.onEnded();
-      }
-
-      // Update playing state based on player state
-      final isPlaying = _controller.value.isPlaying;
-      if (widget.isPlaying != isPlaying) {
-        // This might cause a loop if we are not careful.
-        // But the parent pushes isPlaying down.
-        // We usually want to notify parent if state changes internally (e.g. buffering).
-        // widget.onStateChange(isPlaying);
-      }
-    }
-  }
-
-  @override
-  void didUpdateWidget(YouTubePlayer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Handle Video Change
-    if (widget.videoId != oldWidget.videoId) {
-      _controller.load(widget.videoId);
-    }
-
-    // Handle Play/Pause from Parent
-    if (widget.isPlaying != oldWidget.isPlaying) {
-      if (widget.isPlaying) {
-        _controller.play();
-      } else {
-        _controller.pause();
-      }
-    }
-  }
-
-  @override
-  void deactivate() {
-    // Pauses video while navigating to next page.
-    _controller.pause();
-    super.deactivate();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return YoutubePlayer(
-      controller: _controller,
-      showVideoProgressIndicator: false,
-      onReady: () {
-        _isPlayerReady = true;
-        if (widget.isPlaying) {
-          _controller.play();
-        }
-      },
-      onEnded: (data) {
-        widget.onEnded();
-      },
-    );
+    if (kIsWeb) {
+      return YouTubePlayerWeb(
+        videoId: videoId,
+        isPlaying: isPlaying,
+        onCurrentTime: onCurrentTime,
+        onStateChange: onStateChange,
+        onEnded: onEnded,
+      );
+    } else {
+      return YouTubePlayerMobile(
+        videoId: videoId,
+        isPlaying: isPlaying,
+        onCurrentTime: onCurrentTime,
+        onStateChange: onStateChange,
+        onEnded: onEnded,
+      );
+    }
   }
 }

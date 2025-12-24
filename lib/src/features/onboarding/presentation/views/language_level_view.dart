@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../providers/onboarding_provider.dart';
 import '../widgets/panda_button.dart';
 import '../widgets/selectable_option_card.dart';
 import 'interests_view.dart';
 
-class LanguageLevelView extends StatefulWidget {
+class LanguageLevelView extends ConsumerStatefulWidget {
   const LanguageLevelView({super.key});
 
   @override
-  State<LanguageLevelView> createState() => _LanguageLevelViewState();
+  ConsumerState<LanguageLevelView> createState() => _LanguageLevelViewState();
 }
 
-class _LanguageLevelViewState extends State<LanguageLevelView> {
+class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
   String? _selectedLevel;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLevel = ref.read(onboardingProvider).level;
+  }
 
   final List<Map<String, String>> _levels = [
     {
@@ -38,6 +46,7 @@ class _LanguageLevelViewState extends State<LanguageLevelView> {
 
   void _onContinue() {
     if (_selectedLevel != null) {
+      ref.read(onboardingProvider.notifier).setLevel(_selectedLevel!);
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const InterestsView()),

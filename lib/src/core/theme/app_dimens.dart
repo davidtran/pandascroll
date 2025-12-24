@@ -8,4 +8,5 @@ class AppSpacing {
 class AppRadius {
   static const double button = 12.0;
   static const double card = 20.0; // Rounder = Friendlier
+  static const double pill = 100.0;
 }

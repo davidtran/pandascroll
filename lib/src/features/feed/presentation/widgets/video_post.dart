@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/settings_provider.dart';
@@ -192,9 +193,11 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         // We can add it back if the Players report "isLoaded" state,
         // but for now let's rely on the player's native loading or add a callback later.
         // 1. Transparent Tap Layer
-        GestureDetector(
-          onTap: _togglePlayPause,
-          child: Container(color: Colors.transparent),
+        PointerInterceptor(
+          child: GestureDetector(
+            onTap: _togglePlayPause,
+            child: Container(color: Colors.transparent),
+          ),
         ),
 
         // 3. Bottom Gradient (For text readability)
@@ -217,18 +220,20 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         ),
         if (_isPaused || !widget.isPlaying && !widget.hideContent)
           Center(
-            child: GestureDetector(
-              onTap: _togglePlayPause,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 64,
+            child: PointerInterceptor(
+              child: GestureDetector(
+                onTap: _togglePlayPause,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 64,
+                  ),
                 ),
               ),
             ),
@@ -237,54 +242,56 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         Positioned(
           right: 16,
           bottom: 100, // Adjusted to sit above button
-          child: Column(
-            children: [
-              // Profile
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+          child: PointerInterceptor(
+            child: Column(
+              children: [
+                // Profile
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundImage: NetworkImage(widget.video.authorUrl),
+                      ),
                     ),
-                    child: CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage(widget.video.authorUrl),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
-              // Like
-              _buildActionItem(
-                Icons.favorite_rounded,
-                "12.5k",
-                Colors.white,
-                isLike: true,
-              ),
-              const SizedBox(height: 20),
+                // Like
+                _buildActionItem(
+                  Icons.favorite_rounded,
+                  "12.5k",
+                  Colors.white,
+                  isLike: true,
+                ),
+                const SizedBox(height: 20),
 
-              // Comment
-              _buildActionItem(
-                Icons.chat_bubble_rounded,
-                "342",
-                Colors.white,
-                onTap: widget.onShowComments,
-              ),
-              const SizedBox(height: 20),
-              _buildActionItem(Icons.closed_caption, "Caption", Colors.white),
-            ],
+                // Comment
+                _buildActionItem(
+                  Icons.chat_bubble_rounded,
+                  "342",
+                  Colors.white,
+                  onTap: widget.onShowComments,
+                ),
+                const SizedBox(height: 20),
+                _buildActionItem(Icons.closed_caption, "Caption", Colors.white),
+              ],
+            ),
           ),
         ),
 
@@ -293,44 +300,46 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           left: 16,
           right: 80, // Space for actions
           bottom: 100, // aligned with actions bottom
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Captions Overlay
-              if (showCaptions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: RepaintBoundary(
-                    child: CaptionsOverlay(
-                      key: _captionsKey,
-                      currentTimeNotifier: _currentTimeNotifier,
-                      captions: widget.video.captions,
-                      onWordTap: _handleWordTap,
-                      translations: widget.video.translations,
+          child: PointerInterceptor(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Captions Overlay
+                if (showCaptions)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: RepaintBoundary(
+                      child: CaptionsOverlay(
+                        key: _captionsKey,
+                        currentTimeNotifier: _currentTimeNotifier,
+                        captions: widget.video.captions,
+                        onWordTap: _handleWordTap,
+                        translations: widget.video.translations,
+                      ),
                     ),
                   ),
-                ),
 
-              // Title (Chinese)
-              if (widget.video.title.isNotEmpty)
-                Text(
-                  widget.video.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w100,
-                    height: 1.1,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                // Title (Chinese)
+                if (widget.video.title.isNotEmpty)
+                  Text(
+                    widget.video.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w100,
+                      height: 1.1,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
 
@@ -342,47 +351,49 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: widget.hideContent ? 0.0 : 1.0,
-            child: IgnorePointer(
-              ignoring: widget.hideContent,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 60,
-                      child: Container(
-                        key: _startExerciseKey,
-                        child: PandaButton(
-                          text: "START EXERCISE",
-                          onPressed: widget.onStartQuiz,
-                          disabled: _isTutorialShowing,
-                          icon: Icons.pets,
-                          borderColor: Colors.black,
-                          shadowColor: const Color.fromARGB(255, 38, 38, 38),
+            child: PointerInterceptor(
+              child: IgnorePointer(
+                ignoring: widget.hideContent,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 60,
+                        child: Container(
+                          key: _startExerciseKey,
+                          child: PandaButton(
+                            text: "START EXERCISE",
+                            onPressed: widget.onStartQuiz,
+                            disabled: _isTutorialShowing,
+                            icon: Icons.pets,
+                            borderColor: Colors.black,
+                            shadowColor: const Color.fromARGB(255, 38, 38, 38),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Skip Button
-                  SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: Container(
-                      key: _nextButtonKey,
-                      child: PandaButton(
-                        text: "",
-                        icon: Icons.arrow_forward_rounded,
-                        onPressed: widget.onSkip ?? () {},
-                        disabled: _isTutorialShowing,
-                        backgroundColor: Colors.white,
-                        textColor: AppColors.pandaBlack,
-                        borderColor: Colors.black,
-                        width: 60,
-                        height: 60,
+                    const SizedBox(width: 12),
+                    // Skip Button
+                    SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Container(
+                        key: _nextButtonKey,
+                        child: PandaButton(
+                          text: "",
+                          icon: Icons.arrow_forward_rounded,
+                          onPressed: widget.onSkip ?? () {},
+                          disabled: _isTutorialShowing,
+                          backgroundColor: Colors.white,
+                          textColor: AppColors.pandaBlack,
+                          borderColor: Colors.black,
+                          width: 60,
+                          height: 60,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -538,31 +549,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     );
   }
 
-  Widget _buildMusicDisc() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: const Color(0xFF222222),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey[800]!, width: 4),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
-      ),
-      child: Center(
-        child: ClipOval(
-          child: Image.network(
-            widget.video.authorUrl,
-            width: 24,
-            height: 24,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  bool _isCheckingTutorial = false;
   bool _shouldCheckTutorial = false; // Initialized in initState
   bool _isTutorialShowing = false;
 
@@ -720,24 +706,26 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Ready to Practice? 🐼",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              return PointerInterceptor(
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Ready to Practice? 🐼",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Tap here to start a quick quiz based on this video.",
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                ],
+                    SizedBox(height: 10),
+                    Text(
+                      "Tap here to start a quick quiz based on this video.",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -758,24 +746,26 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Not interested? ⏭️",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              return PointerInterceptor(
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Not interested? ⏭️",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Tap here or swipe up to go to the next video.",
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                ],
+                    SizedBox(height: 10),
+                    Text(
+                      "Tap here or swipe up to go to the next video.",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ],
+                ),
               );
             },
           ),

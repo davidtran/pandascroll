@@ -182,7 +182,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              "videos",
+                              "rounds",
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
@@ -214,7 +214,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                "~${(_videoCount)} mins / day", // Adjusted estimate
+                                "~${(_videoCount * 10)} exercises / day", // Adjusted estimate
                                 style: const TextStyle(
                                   color: AppColors.bambooDark,
                                   fontWeight: FontWeight.bold,

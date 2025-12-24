@@ -60,6 +60,7 @@ class VideoFeedController extends Notifier<VideoFeedState> {
   }
 }
 
-final videoFeedProvider = NotifierProvider<VideoFeedController, VideoFeedState>(
-  VideoFeedController.new,
-);
+final videoFeedProvider =
+    NotifierProvider.autoDispose<VideoFeedController, VideoFeedState>(
+      VideoFeedController.new,
+    );

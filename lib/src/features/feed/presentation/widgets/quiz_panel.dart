@@ -1,12 +1,14 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/core/theme/app_dimens.dart';
-import 'package:pandascroll/src/core/theme/app_theme.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/exercise_model.dart';
+import '../controllers/daily_goal_controller.dart';
 import 'quiz/word_quiz_widget.dart';
 import 'quiz/scramble_widget.dart';
 import 'quiz/video_understanding_widget.dart';
@@ -37,14 +39,8 @@ class BambooSegmentPainter extends CustomPainter {
 
     final Path path = Path();
 
-    // clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
-    // Adapt for rounded ends on first/last
-
-    double slant = size.width * 0.1; // 10% slant or fixed
+    double slant = size.width * 0.1;
     if (slant > 6) slant = 6;
-
-    // Moves: TL -> TR -> BR -> BL
-    // Normal: (slant, 0) -> (w, 0) -> (w-slant, h) -> (0, h)
 
     double leftTopX = slant;
     double rightTopX = size.width;
@@ -52,21 +48,11 @@ class BambooSegmentPainter extends CustomPainter {
     double leftBottomX = 0;
 
     if (isFirst) {
-      // First: Rounded Left.
-      // Rect from 0 to W.
-      // Let's use RRect for the left side?
-      // Or just a path that rounds.
-      // Simple approximation: (0,0) with radius...
-
-      // Let's stick to the polygon logic but 'unslant' the left for first?
-      // User Pill design: <div class="rounded-l-full ...">
-
-      path.moveTo(size.height / 2, 0); // Start after arc top
+      path.moveTo(size.height / 2, 0);
       path.lineTo(rightTopX, 0);
       path.lineTo(rightBottomX, size.height);
       path.lineTo(size.height / 2, size.height);
 
-      // add arc left
       path.arcToPoint(
         Offset(size.height / 2, 0),
         radius: Radius.circular(size.height / 2),
@@ -110,7 +96,7 @@ class BambooProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 12, // h-3
+      height: 12,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: List.generate(totalSteps, (index) {
@@ -118,30 +104,23 @@ class BambooProgressBar extends StatelessWidget {
           final isLast = index == totalSteps - 1;
 
           Color color;
-          // Logic: "passed" ones are correct/wrong. Future ones are light.
-          // Is current index passed?
-          // If index < statusList.length, use status.
-          // Else unanswer.
 
           if (index < statusList.length) {
             final status = statusList[index];
             if (status == AnswerStatus.correct) {
-              color = const Color(0xFF2B7FFF); // Blue ish
+              color = const Color(0xFF2B7FFF);
             } else if (status == AnswerStatus.wrong) {
-              color = const Color(0xFFFF4B4B); // Red
+              color = const Color(0xFFFF4B4B);
             } else {
               color = AppColors.primaryBrand.withOpacity(0.3);
             }
           } else {
-            color = AppColors.primaryBrand.withOpacity(0.3); // Inactive
+            color = AppColors.primaryBrand.withOpacity(0.3);
           }
-
-          // Special case for 'Current' active segment? User didn't specify.
-          // Just "no answer yet = gray" (or light primary).
 
           return Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1), // gap-1
+              padding: const EdgeInsets.symmetric(horizontal: 1),
               child: CustomPaint(
                 painter: BambooSegmentPainter(
                   color: color,
@@ -157,7 +136,7 @@ class BambooProgressBar extends StatelessWidget {
   }
 }
 
-class QuizPanel extends StatefulWidget {
+class QuizPanel extends ConsumerStatefulWidget {
   final String videoId;
   final String audioUrl;
   final Function(String title)? onTitleChanged;
@@ -174,10 +153,10 @@ class QuizPanel extends StatefulWidget {
   });
 
   @override
-  State<QuizPanel> createState() => _QuizPanelState();
+  ConsumerState<QuizPanel> createState() => _QuizPanelState();
 }
 
-class _QuizPanelState extends State<QuizPanel> {
+class _QuizPanelState extends ConsumerState<QuizPanel> {
   bool _isLoading = true;
   String? _error;
   List<ExerciseModel> _exercises = [];
@@ -191,29 +170,36 @@ class _QuizPanelState extends State<QuizPanel> {
   int _lives = 5;
 
   late AudioPlayer _audioPlayer;
+  late ConfettiController _confettiController;
+  final GlobalKey _pawIconKey = GlobalKey();
+
+  // Animation State
+  OverlayEntry? _flyingEntry;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
     _fetchExercises();
   }
 
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
   Future<void> _playAudio({required double start, required double end}) async {
-    print('play ${start} - ${end}');
-    print(widget.audioUrl);
     try {
       if (start < end) {
         await _audioPlayer.setAudioSource(
           ClippingAudioSource(
             start: Duration(milliseconds: (start * 1000).toInt()),
-            end: Duration(milliseconds: ((end + 5) * 1000).toInt()),
+            end: Duration(milliseconds: (end * 1000).toInt()),
             child: AudioSource.uri(Uri.parse(widget.audioUrl)),
           ),
         );
@@ -240,7 +226,7 @@ class _QuizPanelState extends State<QuizPanel> {
         _error = null;
         _correctCount = 0;
         _answerStatus = [];
-        _lives = 5; // Reset lives? assumption
+        _lives = 5;
       });
       _fetchExercises();
     } else {
@@ -265,11 +251,7 @@ class _QuizPanelState extends State<QuizPanel> {
         setState(() {
           _exercises = data.map((e) => ExerciseModel.fromJson(e)).toList();
           _isLoading = false;
-          // Initialize answer status as unanswer? or leave empty and append?
-          // List must match index? The progress bar is fixed size.
-          // we track history.
         });
-        print(_exercises);
         if (_exercises.isNotEmpty) {
           firstTitle = _getExerciseTitle(_exercises[0]) ?? "";
           if (firstTitle != "") {
@@ -301,6 +283,13 @@ class _QuizPanelState extends State<QuizPanel> {
         _isCompleted = true;
       });
       widget.onTitleChanged?.call("Level Complete! 🎉");
+
+      // Check for success condition
+      final success =
+          _exercises.isNotEmpty && (_correctCount / _exercises.length) > 0.5;
+      if (success) {
+        _confettiController.play();
+      }
     }
   }
 
@@ -368,24 +357,17 @@ class _QuizPanelState extends State<QuizPanel> {
 
   void _handleAnswer(bool isCorrect) {
     setState(() {
-      // Update logic: ensure we don't duplicate on retry?
-      // If _currentIndex is already in _answerStatus (retry), update it?
-      // Or just append.
-      // Current Index: _currentIndex.
       if (_answerStatus.length <= _currentIndex) {
         _answerStatus.add(
           isCorrect ? AnswerStatus.correct : AnswerStatus.wrong,
         );
       } else {
-        // Update existing (retry case)
         _answerStatus[_currentIndex] = isCorrect
             ? AnswerStatus.correct
             : AnswerStatus.wrong;
       }
 
       if (!isCorrect) {
-        // Only decrement lives on first failure? Or every failure?
-        // Simple logic: every failure.
         if (_lives > 0) _lives--;
       }
     });
@@ -396,113 +378,185 @@ class _QuizPanelState extends State<QuizPanel> {
         _exercises[_currentIndex],
       );
       _showFeedback(true, correctAnswer: correctAnswer);
+    }
+  }
+
+  void _claimRewardAndFly() {
+    // Get target position
+    final targetGlobalKey = ref.read(dailyGoalKeyProvider);
+    final RenderBox? targetBox =
+        targetGlobalKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? startBox =
+        _pawIconKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (targetBox != null && startBox != null) {
+      final startPos = startBox.localToGlobal(Offset.zero);
+      final targetPos = targetBox.localToGlobal(Offset.zero);
+
+      _flyingEntry = OverlayEntry(
+        builder: (context) => _FlyingPawAnimation(
+          startPos: startPos,
+          targetPos: targetPos,
+          onComplete: () {
+            _flyingEntry?.remove();
+            _flyingEntry = null;
+
+            // Add Rewards
+            ref.read(dailyGoalProvider.notifier).addProgress(_exercises.length);
+
+            // Proceed to next video or reset
+            _handleNextVideoOrReset();
+          },
+        ),
+      );
+
+      Overlay.of(context).insert(_flyingEntry!);
     } else {
-      // Just update state, don't move next.
-      // (Scramble/Cloze handles their own Retry/Feedback triggering).
-      // But wait...
-      // IF Scramble calls onWrong, it calls _handleAnswer(false).
-      // My code in Scramble/Cloze: onWrong: () => _showFeedback(false).
-      // They DO NOT call _handleAnswer(false) in my previous edit!
-      // They call `_showFeedback` directly!
-      // I need to update `_buildExerciseContent` to update status also.
+      // Fallback if positions not found
+      ref.read(dailyGoalProvider.notifier).addProgress(_exercises.length);
+      _handleNextVideoOrReset();
+    }
+  }
+
+  void _handleNextVideoOrReset() {
+    if (widget.onNextVideo != null) {
+      widget.onNextVideo!();
+    } else {
+      setState(() {
+        _currentIndex = 0;
+        _isCompleted = false;
+        _correctCount = 0;
+        _answerStatus = [];
+        _lives = 5;
+      });
+      if (firstTitle.isNotEmpty) {
+        widget.onTitleChanged?.call(firstTitle);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Always show the layout with Header
-    return Column(
+    return Stack(
       children: [
-        // BAMBOO HEADER
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              Row(
+        Column(
+          children: [
+            // BAMBOO HEADER
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
                 children: [
-                  const Icon(Icons.favorite, color: Colors.red, size: 20),
-                  const SizedBox(width: 4),
-                  Text(
-                    "$_lives",
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
-                      fontFamily: 'Fredoka',
+                  Row(
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.red, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        "$_lives",
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                          fontFamily: 'Fredoka',
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: BambooProgressBar(
+                      totalSteps: _exercises.length,
+                      statusList: _answerStatus,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => widget.onClose(),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.grey,
+                      size: 20,
                     ),
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(width: 12),
-              Expanded(
-                child: BambooProgressBar(
-                  totalSteps: _exercises.length,
-                  statusList: _answerStatus,
+            // 2. Content Area
+            Expanded(child: _buildBodyContent()),
+
+            if (!_isCompleted)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _currentIndex--;
+                      }),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          // SKIP
+                          setState(() {
+                            if (_answerStatus.length <= _currentIndex) {
+                              _answerStatus.add(AnswerStatus.unanswer);
+                            }
+                          });
+                          _nextExercise();
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey,
+                        ),
+                        child: const Text(
+                          "Skip Question",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _currentIndex++;
+                      }),
+                      child: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => widget.onClose(),
-                child: const Icon(Icons.close, color: Colors.grey, size: 20),
-              ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+
+        // Confetti
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [
+              Colors.green,
+              Colors.blue,
+              Colors.pink,
+              Colors.orange,
+              Colors.purple,
             ],
           ),
         ),
-
-        // 2. Content Area (Switch based on state)
-        Expanded(child: _buildBodyContent()),
-        if (!_isCompleted)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _currentIndex--;
-                  }),
-                  child: const Icon(
-                    Icons.chevron_left,
-                    color: Colors.grey,
-                    size: 20,
-                  ),
-                ),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      // SKIP
-                      setState(() {
-                        if (_answerStatus.length <= _currentIndex) {
-                          _answerStatus.add(AnswerStatus.unanswer);
-                        }
-                      });
-                      _nextExercise();
-                    },
-                    style: TextButton.styleFrom(foregroundColor: Colors.grey),
-                    child: const Text(
-                      "Skip Question",
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _currentIndex++;
-                  }),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: AppSpacing.md),
       ],
     );
   }
@@ -571,18 +625,22 @@ class _QuizPanelState extends State<QuizPanel> {
         ? (_correctCount / _exercises.length * 100).round()
         : 0;
 
+    final bool isSuccess =
+        _exercises.isNotEmpty && (_correctCount / _exercises.length) > 0.5;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: AppSpacing.xl),
           Text(
-            "Congratulations!",
+            isSuccess ? "Awesome! 🎉" : "Good Try!",
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: AppColors.textMain,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             "You answered $_correctCount/${_exercises.length} correctly ($percentage%).",
             style: Theme.of(
@@ -590,27 +648,52 @@ class _QuizPanelState extends State<QuizPanel> {
             ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppSpacing.xl),
-          PandaButton(
-            width: 200,
-            onPressed: () {
-              if (widget.onNextVideo != null) {
-                widget.onNextVideo!();
-              } else {
-                setState(() {
-                  _currentIndex = 0;
-                  _isCompleted = false;
-                  _correctCount = 0;
-                  _answerStatus = [];
-                  _lives = 5;
-                });
-                if (firstTitle.isNotEmpty) {
-                  widget.onTitleChanged?.call(firstTitle);
-                }
-              }
-            },
-            text: "Next Video",
-          ),
+
+          if (isSuccess) ...[
+            const SizedBox(height: AppSpacing.xl),
+            const Text(
+              "Total Reward",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.pandaBlack,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/paw.png',
+                  width: 40,
+                  height: 40,
+                  key: _pawIconKey, // Start position for animation
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "x ${_exercises.length}", // Just using total exercises as reward count?
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PandaButton(
+              width: 200,
+              onPressed: _claimRewardAndFly, // Claims and Shows animation
+              text: "Claim",
+            ),
+          ] else ...[
+            const SizedBox(height: AppSpacing.xl),
+            PandaButton(
+              width: 200,
+              onPressed: _handleNextVideoOrReset,
+              text: "Continue", // Or "Try Again"?
+            ),
+          ],
         ],
       ),
     );
@@ -628,7 +711,6 @@ class _QuizPanelState extends State<QuizPanel> {
           data: ScrambleData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
           onWrong: () {
-            // Handle Wrong: Update status + Show Feedback
             setState(() {
               if (_answerStatus.length <= _currentIndex) {
                 _answerStatus.add(AnswerStatus.wrong);
@@ -704,7 +786,6 @@ class _QuizPanelState extends State<QuizPanel> {
       }
     }
 
-    // Fallback titles if 'title' field is missing
     switch (exercise.type) {
       case 'word_quiz':
         return 'Word Quiz';
@@ -719,5 +800,73 @@ class _QuizPanelState extends State<QuizPanel> {
       default:
         return null;
     }
+  }
+}
+
+class _FlyingPawAnimation extends StatefulWidget {
+  final Offset startPos;
+  final Offset targetPos;
+  final VoidCallback onComplete;
+
+  const _FlyingPawAnimation({
+    required this.startPos,
+    required this.targetPos,
+    required this.onComplete,
+  });
+
+  @override
+  State<_FlyingPawAnimation> createState() => _FlyingPawAnimationState();
+}
+
+class _FlyingPawAnimationState extends State<_FlyingPawAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+
+    // Scale down as it flies away
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.5).animate(_controller);
+
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final currentX =
+            widget.startPos.dx +
+            (widget.targetPos.dx - widget.startPos.dx) * _animation.value;
+        final currentY =
+            widget.startPos.dy +
+            (widget.targetPos.dy - widget.startPos.dy) * _animation.value;
+
+        return Positioned(
+          left: currentX,
+          top: currentY,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Image.asset('assets/images/paw.png', width: 40, height: 40),
+          ),
+        );
+      },
+    );
   }
 }

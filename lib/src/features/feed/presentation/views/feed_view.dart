@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../controllers/video_controller.dart';
+import '../controllers/daily_goal_controller.dart';
 import '../widgets/interaction_panel.dart';
 import '../widgets/video_post.dart';
 import '../widgets/quiz_panel.dart';
@@ -161,6 +162,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
   }
 
   Widget _buildDailyGoalBadge() {
+    final dailyGoal = ref.watch(dailyGoalProvider);
+    final goalKey = ref.watch(dailyGoalKeyProvider);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -176,6 +180,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
         children: [
           // Icon
           Container(
+            key: goalKey, // Add GlobalKey here
             width: 32,
             height: 32,
             decoration: BoxDecoration(
@@ -225,8 +230,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          "3/5",
-                          style: TextStyle(
+                          "${dailyGoal.currentProgress}/${dailyGoal.target}",
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 8,
                             fontWeight: FontWeight.w900,
@@ -255,7 +260,11 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   children: [
                     // Fill
                     FractionallySizedBox(
-                      widthFactor: 0.6, // 3/5
+                      widthFactor:
+                          (dailyGoal.currentProgress / dailyGoal.target).clamp(
+                            0.0,
+                            1.0,
+                          ),
                       child: Container(
                         decoration: BoxDecoration(
                           color: AppColors.accent,

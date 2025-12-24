@@ -182,7 +182,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              "rounds",
+                              "videos",
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,

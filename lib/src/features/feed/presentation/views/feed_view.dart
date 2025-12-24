@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pandascroll/src/features/feed/presentation/widgets/daily_goal/daily_goal_widget.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../controllers/video_controller.dart';
@@ -93,12 +94,26 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   // Daily Goal (Left)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: PointerInterceptor(child: _buildDailyGoalBadge()),
+                    child: PointerInterceptor(child: const DailyGoalWidget()),
                   ),
                 ],
               ),
             ),
           ),
+
+          // Barrier (Click to close panel)
+          if (_isPanelOpen)
+            Positioned.fill(
+              child: PointerInterceptor(
+                child: GestureDetector(
+                  onTap: _closePanel,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    color: Colors.black54, // Dim background for focus
+                  ),
+                ),
+              ),
+            ),
 
           // Interaction Panel (Animated)
           AnimatedPositioned(
@@ -161,64 +176,6 @@ class _FeedViewState extends ConsumerState<FeedView> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDailyGoalBadge() {
-    final dailyGoal = ref.watch(dailyGoalProvider);
-    final goalKey = ref.watch(dailyGoalKeyProvider);
-
-    return Container(
-      key: goalKey,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset('assets/images/paw.png', width: 24, height: 24),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Daily Goal",
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Row(
-                children: [
-                  Text(
-                    "${dailyGoal.currentProgress}/${dailyGoal.target}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.pandaBlack,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 60,
-                    child: _StripeProgressBar(
-                      progress: (dailyGoal.currentProgress / dailyGoal.target)
-                          .clamp(0.0, 1.0),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -295,137 +252,5 @@ class _VideoPageFeed extends ConsumerWidget {
         );
       },
     );
-  }
-}
-
-class _StripeProgressBar extends StatefulWidget {
-  final double progress;
-
-  const _StripeProgressBar({required this.progress});
-
-  @override
-  State<_StripeProgressBar> createState() => _StripeProgressBarState();
-}
-
-class _StripeProgressBarState extends State<_StripeProgressBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _stripeController;
-
-  @override
-  void initState() {
-    super.initState();
-    _stripeController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _stripeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 1. Progress Fill
-        return Container(
-          height: 8, // Match height
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4), // Match previous
-            color: Colors.grey[200],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Stack(
-              children: [
-                FractionallySizedBox(
-                  widthFactor: widget.progress,
-                  child: Container(color: AppColors.primaryBrand),
-                ),
-
-                // 2. Animated Stripes
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _stripeController,
-                    builder: (context, child) {
-                      return ClipRect(
-                        child: FractionallySizedBox(
-                          widthFactor: widget.progress,
-                          child: CustomPaint(
-                            painter: _FixedStripePainter(
-                              offset: _stripeController.value * 20.0,
-                              stripeWidth: 8.0,
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FixedStripePainter extends CustomPainter {
-  final double offset;
-  final double stripeWidth;
-  final Color color;
-
-  _FixedStripePainter({
-    required this.offset,
-    required this.stripeWidth,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    // period
-    final double period = stripeWidth * 2;
-
-    final path = Path();
-
-    // Coverage
-    // We want stripes ///
-    // from left to right.
-
-    int count = (size.width / stripeWidth).ceil() * 2 + 5;
-
-    for (int i = -5; i < count; i++) {
-      double startX =
-          i * period +
-          (offset % period) -
-          period; // Shift left by period to cover entrance?
-
-      // Draw parallelogram leaning ///
-      // Bottom-left: (startX, h)
-      // Bottom-right: (startX + w, h)
-      // Top-right: (startX + w + h, 0) -> lean right involves adding h to x at top
-      // Top-left: (startX + h, 0)
-
-      path.moveTo(startX, size.height);
-      path.lineTo(startX + stripeWidth, size.height);
-      path.lineTo(startX + stripeWidth + size.height, 0);
-      path.lineTo(startX + size.height, 0);
-      path.close();
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _FixedStripePainter oldDelegate) {
-    return oldDelegate.offset != offset ||
-        oldDelegate.stripeWidth != stripeWidth ||
-        oldDelegate.color != color;
   }
 }

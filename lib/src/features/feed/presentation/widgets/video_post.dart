@@ -21,6 +21,7 @@ class VideoPost extends ConsumerStatefulWidget {
   final bool hideContent;
   final VoidCallback onStartQuiz;
   final VoidCallback onShowComments;
+
   final Function(String title, Widget content) onShowPanel;
 
   const VideoPost({
@@ -45,6 +46,7 @@ class VideoPost extends ConsumerStatefulWidget {
 class _VideoPostState extends ConsumerState<VideoPost> {
   bool _isPaused = false;
   Timer? _progressTimer;
+  bool _isMuted = false;
 
   // Notifiers for UI updates
   final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
@@ -64,6 +66,11 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     super.dispose();
   }
 
+  void _toggleCaptions() {
+    print('toggle captions');
+    ref.read(settingsProvider.notifier).toggleCaptions();
+  }
+
   void _startTimer() {
     _stopTimer();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
@@ -80,8 +87,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     setState(() {
       _isPaused = true;
     });
-
-    // We'll handle the actual pausing by passing `widget.isPlaying && !_isPaused` to the player.
 
     try {
       widget.onShowPanel(
@@ -175,7 +180,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
 
   @override
   Widget build(BuildContext context) {
-    final showCaptions = ref.watch(settingsProvider);
+    final settings = ref.watch(settingsProvider);
 
     // Effective playing state:
     // 1. Must be the active video (widget.isPlaying)
@@ -286,10 +291,22 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                   Icons.chat_bubble_rounded,
                   "342",
                   Colors.white,
-                  onTap: widget.onShowComments,
+                  onTap: () {
+                    widget.onShowComments();
+                    print('toggle comment');
+                  },
+                  size: 24,
                 ),
+
                 const SizedBox(height: 20),
-                _buildActionItem(Icons.closed_caption, "Caption", Colors.white),
+                _buildActionItem(
+                  settings.captions
+                      ? Icons.closed_caption
+                      : Icons.closed_caption_off,
+                  "Caption",
+                  Colors.white,
+                  onTap: _toggleCaptions,
+                ),
               ],
             ),
           ),
@@ -306,7 +323,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Captions Overlay
-                if (showCaptions)
+                if (settings.captions)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: RepaintBoundary(
@@ -504,6 +521,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     Color color, {
     bool isLike = false,
     VoidCallback? onTap,
+    double size = 32,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -517,7 +535,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
             ),
             child: Icon(
               icon,
-              size: 32,
+              size: size,
               color: isLike ? Colors.red : color,
               shadows: [
                 const Shadow(

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -119,11 +120,13 @@ class _ParrotWidgetState extends State<ParrotWidget> {
   Future<void> _startRecording() async {
     try {
       if (await _audioRecorder.hasPermission()) {
-        final directory = await getApplicationDocumentsDirectory();
-        final path = '${directory.path}/recording.m4a';
+        String? path;
 
-        // Check if file exists and delete it? Record usually overwrites
-        // File(path).delete();
+        if (!kIsWeb) {
+          final directory = await getApplicationDocumentsDirectory();
+          path = '${directory.path}/recording.m4a';
+        }
+        // On Web, path is ignored/handled by browser (returns blob URL on stop)
 
         await _audioRecorder.start(path: path, encoder: AudioEncoder.aacLc);
         setState(() {

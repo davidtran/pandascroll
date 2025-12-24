@@ -2,8 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pandascroll/src/features/feed/presentation/controllers/daily_goal_controller.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_dimens.dart';
+
 import '../../../../core/services/notification_service.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/views/login_view.dart';
@@ -32,6 +33,9 @@ class _GoalViewState extends ConsumerState<GoalView> {
       await notificationService.requestPermissions();
       await notificationService.scheduleDailyReminders();
     }
+
+    // Update the Daily Goal Provider
+    ref.read(dailyGoalProvider.notifier).setTarget(_videoCount * 10);
 
     final isLoggedIn = ref.read(authProvider).value ?? false;
 

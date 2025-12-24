@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/dictionary_model.dart';
-import 'interaction_panel.dart';
 
 class DictionaryPanel extends StatelessWidget {
   final DictionaryModel data;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import '../../../../core/utils/language_utils.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../controllers/comments_controller.dart';
 import '../../domain/models/comment_model.dart';
@@ -53,11 +54,10 @@ class _CommentsPanelState extends ConsumerState<CommentsPanel> {
 
       if (detectedLang != 'und' && detectedLang != targetLanguage) {
         if (mounted) {
+          final langName = LanguageUtils.getLanguageName(targetLanguage);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                "Please comment in ${targetLanguage == 'zh' ? 'Chinese' : targetLanguage}",
-              ),
+              content: Text("Please comment in $langName"),
               backgroundColor: Colors.red,
             ),
           );
@@ -407,6 +407,10 @@ class _CommentsPanelState extends ConsumerState<CommentsPanel> {
   }
 
   Widget _buildInputArea() {
+    final profile = ref.watch(userProfileProvider).value;
+    final targetLang = profile?['target_language'] as String?;
+    final langName = LanguageUtils.getLanguageName(targetLang);
+
     return Container(
       padding: EdgeInsets.only(
         left: 16,
@@ -443,15 +447,15 @@ class _CommentsPanelState extends ConsumerState<CommentsPanel> {
                   fontWeight: FontWeight.w600,
                   color: AppColors.pandaBlack,
                 ),
-                decoration: const InputDecoration(
-                  hintText: "Say something... (Chinese Only)",
-                  hintStyle: TextStyle(
+                decoration: InputDecoration(
+                  hintText: "Say something... ($langName Only)",
+                  hintStyle: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
                     fontWeight: FontWeight.w500,
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
                   ),

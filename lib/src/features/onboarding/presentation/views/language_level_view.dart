@@ -62,7 +62,8 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
     const Color textMain = AppColors.textMain;
 
     final targetLanguage = ref.watch(onboardingProvider).targetLanguage;
-    final languageName = LanguageUtils.getLanguageName(targetLanguage).toLowerCase();
+    final languageName =
+        '${LanguageUtils.getLanguageName(targetLanguage).toLowerCase()}?';
 
     return Scaffold(
       backgroundColor: AppColors.creamBg,
@@ -80,30 +81,7 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildSquareBtn(Icons.arrow_back),
-                      // Progress Bar 75%
-                      Container(
-                        height: 12,
-                        width: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 75,
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryBrand,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 48), // Spacer
-                    ],
+                    children: [_buildSquareBtn(Icons.arrow_back)],
                   ),
                 ),
 
@@ -134,7 +112,6 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                                 decorationColor: Color(0xFFFFD336),
                               ),
                             ),
-                            const TextSpan(text: "?"),
                           ],
                         ),
                       ),
@@ -159,8 +136,7 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                           ),
                         );
                       }),
-
-                      
+                    ],
                   ),
                 ),
               ],

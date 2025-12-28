@@ -402,24 +402,32 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                         },
                   ),
                 ),
-
+                const SizedBox(height: 32),
                 // Footer Controls (Ratings trigger Swipes)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       // Hard (Left)
                       _buildRatingFab(
                         "Hard",
-                        FaIcon(FontAwesomeIcons.faceFrown, color: Colors.black),
+                        FaIcon(
+                          FontAwesomeIcons.faceFrown,
+                          color: Colors.black,
+                          size: 16,
+                        ),
                         Colors.redAccent,
                         () => _rateAndSwipe(CardRating.hard),
                       ),
                       // Good (Right)
                       _buildRatingFab(
                         "Good",
-                        FaIcon(FontAwesomeIcons.faceMeh, color: Colors.black),
+                        FaIcon(
+                          FontAwesomeIcons.faceMeh,
+                          color: Colors.black,
+                          size: 16,
+                        ),
                         primaryGreen,
                         () => _rateAndSwipe(CardRating.good),
                       ),
@@ -429,6 +437,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                         FaIcon(
                           FontAwesomeIcons.faceGrinBeam,
                           color: Colors.black,
+                          size: 16,
                         ),
                         accentOrange,
                         () => _rateAndSwipe(CardRating.easy),
@@ -460,13 +469,14 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
           foregroundColor: Colors.white,
           elevation: 4,
           child: icon,
+          mini: true,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
             color: color,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w400,
             fontSize: 12,
           ),
         ),

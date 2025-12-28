@@ -133,7 +133,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      "How fast do you want to become fluent?",
+                      "how is your commitment per day?",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'Nunito',
@@ -218,7 +218,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                "~${(_videoCount * 10)} exercises / day", // Adjusted estimate
+                                "~${(_videoCount * 5)} study time / day", // Adjusted estimate
                                 style: const TextStyle(
                                   color: AppColors.bambooDark,
                                   fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                         const SizedBox(height: 16),
 
                         const Text(
-                          "Creating a habit is key! Picking a daily target helps you stay consistent.",
+                          "creating a habit is key! picking a daily target helps you stay consistent.",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: AppColors.textLight,
@@ -274,37 +274,6 @@ class _GoalViewState extends ConsumerState<GoalView> {
                   const SizedBox(height: 24),
 
                   // Gamification context
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.emoji_events,
-                          color: AppColors.accentFun,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Earn 10 XP per video",
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   const Spacer(),
 
                   // Footer
@@ -315,7 +284,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
                       right: 24,
                     ),
                     child: PandaButton(
-                      text: "Commit Goal",
+                      text: "commit goal",
                       onPressed: _commitGoal,
                       icon: Icons.arrow_forward,
                     ),

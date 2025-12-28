@@ -120,6 +120,7 @@ class _InterestsViewState extends ConsumerState<InterestsView> {
                     children: [
                       const SizedBox(height: 16),
                       RichText(
+                        textAlign: TextAlign.center,
                         text: const TextSpan(
                           style: TextStyle(
                             fontSize: 32,
@@ -129,14 +130,15 @@ class _InterestsViewState extends ConsumerState<InterestsView> {
                             height: 1.1,
                           ),
                           children: [
-                            TextSpan(text: "What are you into? "),
+                            TextSpan(text: "what are you into? "),
                             TextSpan(text: "🐼"),
                           ],
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Pick at least 3 topics to build your custom feed.",
+                        "pick at least 3 topics to build your custom feed.",
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textMain.withOpacity(0.6),
                           fontSize: 16,
@@ -207,7 +209,7 @@ class _InterestsViewState extends ConsumerState<InterestsView> {
                 child: SafeArea(
                   top: false,
                   child: PandaButton(
-                    text: "Start Learning",
+                    text: "start learning",
                     onPressed: _onStartLearning,
                     icon: Icons.arrow_forward_rounded,
                   ),
@@ -259,7 +261,7 @@ class _InterestsViewState extends ConsumerState<InterestsView> {
                   Text(item['emoji'], style: const TextStyle(fontSize: 28)),
                   const SizedBox(height: 12),
                   Text(
-                    item['label'],
+                    item['label'].toLowerCase(),
                     style: AppTheme.lightTheme.textTheme.titleMedium,
                   ),
                 ],

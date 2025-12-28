@@ -10,6 +10,7 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/utils/language_utils.dart';
 import '../../data/stats_repository.dart';
 import '../../domain/models/video_model.dart';
 import '../../domain/models/dictionary_model.dart';
@@ -784,11 +785,15 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return const Column(
+              final profile = ref.read(userProfileProvider).value;
+              final targetLang = profile?['target_language'] as String?;
+              final langName = LanguageUtils.getLanguageName(targetLang);
+
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     "Tap to Look Up! 👆",
                     style: TextStyle(
                       color: Colors.white,
@@ -796,10 +801,10 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Text(
-                    "Tap on any Chinese character in the captions to see its meaning instantly.",
-                    style: TextStyle(color: Colors.white, fontSize: 18),
+                    "Tap on any $langName character in the captions to see its meaning instantly.",
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ],
               );

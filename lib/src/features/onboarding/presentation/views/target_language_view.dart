@@ -56,35 +56,7 @@ class _TargetLanguageViewState extends ConsumerState<TargetLanguageView> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  child: Row(
-                    children: [
-                      _buildSquareBtn(Icons.arrow_back),
-                      Expanded(
-                        child: Center(
-                          child: Container(
-                            height: 8,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 50, // 50% progress
-                                  decoration: BoxDecoration(
-                                    color: primaryColor,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      _buildSquareBtn(Icons.settings),
-                    ],
-                  ),
+                  child: Row(children: [_buildSquareBtn(Icons.arrow_back)]),
                 ),
 
                 // Title Section

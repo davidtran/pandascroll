@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/dictionary_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../flashcards/data/flashcards_repository.dart';
 
-class DictionaryPanel extends StatelessWidget {
+class DictionaryPanel extends ConsumerWidget {
   final DictionaryModel data;
   final VoidCallback onClose; // Added callback
+  final String? videoId; // Passed from parent
 
-  const DictionaryPanel({super.key, required this.data, required this.onClose});
+  const DictionaryPanel({
+    super.key,
+    required this.data,
+    required this.onClose,
+    this.videoId,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    // Custom colors from the design
-    const Color softGreen = Color(0xFFE0FBE6);
+  Widget build(BuildContext context, WidgetRef ref) {
     // const Color pandaBlack = AppColors.textMain; // Already defined
 
     return SingleChildScrollView(
@@ -135,7 +141,9 @@ class DictionaryPanel extends StatelessWidget {
 
           // Examples
           if (data.examples.isNotEmpty)
-            ...data.examples.map((example) => _buildExampleCard(example)),
+            ...data.examples.map(
+              (example) => _buildExampleCard(example, data.word),
+            ),
 
           const SizedBox(height: 24),
 
@@ -144,7 +152,38 @@ class DictionaryPanel extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(flashcardsRepositoryProvider)
+                      .addFlashcard(
+                        front: data.word,
+                        back: [
+                          data.pronunciation,
+                          data.translation,
+                          // Add definition if available in model, or other details
+                        ],
+                        videoId: videoId,
+                      );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Added to Flashcards!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error adding to Flashcards: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.textMain,
                 foregroundColor: Colors.white,
@@ -175,7 +214,7 @@ class DictionaryPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildExampleCard(Example example) {
+  Widget _buildExampleCard(Example example, String highlightWord) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -217,7 +256,7 @@ class DictionaryPanel extends StatelessWidget {
                 // Chinese Text with Highlight
                 _buildHighlightedText(
                   text: example.text,
-                  highlight: data.word,
+                  highlight: highlightWord,
                   baseStyle: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -230,19 +269,6 @@ class DictionaryPanel extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 4),
-
-                // Pronunciation
-                // Text(
-                //   example.pronunciation,
-                //   style: TextStyle(
-                //     fontSize: 16,
-                //     color: Colors.grey[600],
-                //     fontFamily: 'Nunito',
-                //     fontWeight: FontWeight.w600,
-                //   ),
-                // ),
-
-                // const SizedBox(height: 4),
 
                 // Translation
                 Text(

@@ -7,6 +7,7 @@ class YouTubePlayerMobile extends StatefulWidget {
   final Function(double) onCurrentTime;
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
+  final Stream<int>? seekStream;
 
   const YouTubePlayerMobile({
     super.key,
@@ -15,6 +16,7 @@ class YouTubePlayerMobile extends StatefulWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.seekStream,
   });
 
   @override
@@ -29,6 +31,13 @@ class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
   void initState() {
     super.initState();
     _initializeController();
+    widget.seekStream?.listen((seconds) {
+      if (_isPlayerReady && mounted) {
+        final currentPos = _controller.value.position;
+        final newPos = currentPos + Duration(seconds: seconds);
+        _controller.seekTo(newPos);
+      }
+    });
   }
 
   void _initializeController() {

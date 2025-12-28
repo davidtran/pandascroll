@@ -1,20 +1,25 @@
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/core/theme/app_dimens.dart';
-import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/exercise_model.dart';
-import '../controllers/daily_goal_controller.dart';
+import '../providers/stats_provider.dart';
+import '../providers/paw_provider.dart';
 import 'quiz/word_quiz_widget.dart';
 import 'quiz/scramble_widget.dart';
 import 'quiz/video_understanding_widget.dart';
 import 'quiz/cloze_widget.dart';
 import 'quiz/parrot_widget.dart';
 import 'quiz/quiz_feedback_sheet.dart';
+import 'quiz/quiz_completion_screen.dart';
+import 'quiz/quiz_failed_screen.dart';
+import 'quiz/word_preparation_screen.dart';
+import '../../domain/models/word_preparation_model.dart';
 
 // --- Bamboo Progress Components ---
 
@@ -96,7 +101,7 @@ class BambooProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 12,
+      height: 8,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: List.generate(totalSteps, (index) {
@@ -112,10 +117,10 @@ class BambooProgressBar extends StatelessWidget {
             } else if (status == AnswerStatus.wrong) {
               color = const Color(0xFFFF4B4B);
             } else {
-              color = AppColors.primaryBrand.withOpacity(0.3);
+              color = AppColors.textLight.withOpacity(0.5);
             }
           } else {
-            color = AppColors.primaryBrand.withOpacity(0.3);
+            color = AppColors.textLight.withOpacity(0.5);
           }
 
           return Expanded(
@@ -164,25 +169,28 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
   bool _isCompleted = false;
   String firstTitle = "";
   int _correctCount = 0;
+  final Set<String> _correctExerciseIds = {};
+
+  // Preparation State
+  WordPreparationModel? _preparationData;
+  bool _isPreparationCompleted = false;
 
   // Bamboo State
   List<AnswerStatus> _answerStatus = [];
-  int _lives = 5;
+  int _lives = 3; // Changed from 5 to 3
+  DateTime? _startTime;
 
   late AudioPlayer _audioPlayer;
   late ConfettiController _confettiController;
-  final GlobalKey _pawIconKey = GlobalKey();
-
-  // Animation State
-  OverlayEntry? _flyingEntry;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
     _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 1),
     );
+    _startTime = DateTime.now();
     _fetchExercises();
   }
 
@@ -225,8 +233,12 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
         _isLoading = true;
         _error = null;
         _correctCount = 0;
+        _correctExerciseIds.clear();
         _answerStatus = [];
-        _lives = 5;
+        _lives = 3;
+        _startTime = DateTime.now();
+        _preparationData = null;
+        _isPreparationCompleted = false;
       });
       _fetchExercises();
     } else {
@@ -240,17 +252,87 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
     }
   }
 
+  void _showNoEnergyDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Out of Energy! 🐾"),
+        content: const Text(
+          "You need more paws to play. Wait for them to regenerate.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              widget.onClose(); // Close panel
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _fetchExercises() async {
+    // 1. Check if user has enough paws (READ-ONLY)
+    if (_exercises.isEmpty && _isLoading) {
+      final pawState = ref.read(pawProvider).value;
+      if (pawState == null || pawState.count <= 0) {
+        if (mounted) _showNoEnergyDialog();
+        return;
+      }
+    }
+
     try {
       final response = await ApiClient.get(
         '/exercises?video_id=${widget.videoId}&translate_language=Vietnamese',
       );
-      final List<dynamic> data = response['data'];
+
+      // Fetch Preparation Data concurrently or sequentially
+      // We do it sequentially here for simplicity and error handling
+      WordPreparationModel? prepData;
+      try {
+        final prepResponse = await ApiClient.post(
+          '/exercise_prepare?',
+          body: {'video_id': widget.videoId},
+        );
+        if (prepResponse['data'] != null) {
+          prepData = WordPreparationModel.fromJson(prepResponse['data']);
+        }
+      } catch (e) {
+        debugPrint("Failed to fetch preparation data: $e");
+        // We can continue without preparation data if it fails
+      }
+
+      if (!mounted) return;
+
+      final List<dynamic> responseData = response['data'];
+      final exercises = responseData.map((json) {
+        return ExerciseModel.fromJson(json);
+      }).toList();
+
+      if (exercises.isNotEmpty) {
+        // 2. Consume Paw (WRITE) - Only after successful load
+        final pawNotifier = ref.read(pawProvider.notifier);
+        final success = await pawNotifier.consume();
+
+        if (!success) {
+          if (mounted) _showNoEnergyDialog();
+          return;
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _exercises = data.map((e) => ExerciseModel.fromJson(e)).toList();
+          _exercises = exercises;
+          _preparationData = prepData;
           _isLoading = false;
+          // If no prep data, mark as completed immediately
+          if (prepData == null ||
+              (prepData.words.isEmpty && prepData.sentences.isEmpty)) {
+            _isPreparationCompleted = true;
+          }
         });
         if (_exercises.isNotEmpty) {
           firstTitle = _getExerciseTitle(_exercises[0]) ?? "";
@@ -282,12 +364,29 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
       setState(() {
         _isCompleted = true;
       });
+
+      final duration = _startTime != null
+          ? DateTime.now().difference(_startTime!).inSeconds.toDouble()
+          : 0.0;
+
+      // Save Quiz Stats
+      ref
+          .read(statsRepositoryProvider)
+          .insertExerciseResult(
+            score: _correctCount.toDouble(),
+            totalQuestions: _exercises.length.toDouble(),
+            durationSeconds: duration,
+            videoId: widget.videoId,
+          );
+
       widget.onTitleChanged?.call("Level Complete! 🎉");
 
       // Check for success condition
       final success =
           _exercises.isNotEmpty && (_correctCount / _exercises.length) > 0.5;
       if (success) {
+        // Refund Paw
+        ref.read(pawProvider.notifier).refund();
         _confettiController.play();
       }
     }
@@ -326,6 +425,12 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
           Navigator.pop(context);
           if (isCorrect) {
             _nextExercise();
+          } else {
+            if (_lives <= 0) {
+              setState(() {}); // Trigger rebuild to show fail screen
+            } else {
+              _nextExercise();
+            }
           }
         },
         onRetry: () {
@@ -366,72 +471,70 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
             ? AnswerStatus.correct
             : AnswerStatus.wrong;
       }
-
-      if (!isCorrect) {
-        if (_lives > 0) _lives--;
-      }
     });
 
     if (isCorrect) {
-      _correctCount++;
-      final correctAnswer = _getExerciseCorrectAnswer(
-        _exercises[_currentIndex],
-      );
+      final currentExercise = _exercises[_currentIndex];
+      // Only increment score if this exercise hasn't been answered correctly before
+      if (!_correctExerciseIds.contains(currentExercise.id)) {
+        _correctExerciseIds.add(currentExercise.id);
+        _correctCount++;
+      }
+
+      final correctAnswer = _getExerciseCorrectAnswer(currentExercise);
       _showFeedback(true, correctAnswer: correctAnswer);
-    }
-  }
-
-  void _claimRewardAndFly() {
-    // Get target position
-    final targetGlobalKey = ref.read(dailyGoalKeyProvider);
-    final RenderBox? targetBox =
-        targetGlobalKey.currentContext?.findRenderObject() as RenderBox?;
-    final RenderBox? startBox =
-        _pawIconKey.currentContext?.findRenderObject() as RenderBox?;
-
-    if (targetBox != null && startBox != null) {
-      final startPos = startBox.localToGlobal(Offset.zero);
-      final targetPos = targetBox.localToGlobal(Offset.zero);
-
-      _flyingEntry = OverlayEntry(
-        builder: (context) => _FlyingPawAnimation(
-          startPos: startPos,
-          targetPos: targetPos,
-          onComplete: () {
-            _flyingEntry?.remove();
-            _flyingEntry = null;
-
-            // Add Rewards
-            ref.read(dailyGoalProvider.notifier).addProgress(_exercises.length);
-
-            // Proceed to next video or reset
-            _handleNextVideoOrReset();
-          },
-        ),
-      );
-
-      Overlay.of(context).insert(_flyingEntry!);
-    } else {
-      // Fallback if positions not found
-      ref.read(dailyGoalProvider.notifier).addProgress(_exercises.length);
-      _handleNextVideoOrReset();
     }
   }
 
   void _handleNextVideoOrReset() {
     if (widget.onNextVideo != null) {
       widget.onNextVideo!();
+      _resetState();
     } else {
-      setState(() {
-        _currentIndex = 0;
-        _isCompleted = false;
-        _correctCount = 0;
-        _answerStatus = [];
-        _lives = 5;
-      });
-      if (firstTitle.isNotEmpty) {
-        widget.onTitleChanged?.call(firstTitle);
-      }
+      _resetState();
+    }
+  }
+
+  void _handleClose() {
+    // Show confirm dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Quit Quiz?"),
+        content: const Text(
+          "Are you sure you want to quit? You will lose progress.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              _resetState();
+              widget.onClose();
+            },
+            child: const Text("Quit", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resetState() {
+    setState(() {
+      _currentIndex = 0;
+      _isCompleted = false;
+      _correctCount = 0;
+      _correctExerciseIds.clear();
+      _answerStatus = [];
+      _lives = 3;
+      _startTime = DateTime.now();
+      _isPreparationCompleted = false;
+    });
+    if (firstTitle.isNotEmpty) {
+      widget.onTitleChanged?.call(firstTitle);
     }
   }
 
@@ -449,23 +552,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
               ),
               child: Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.favorite, color: Colors.red, size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        "$_lives",
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 16,
-                          fontFamily: 'Fredoka',
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(width: 12),
                   Expanded(
                     child: BambooProgressBar(
                       totalSteps: _exercises.length,
@@ -473,8 +559,24 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // Hearts Logic
+                  Row(
+                    children: List.generate(3, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(
+                          index < _lives
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: index < _lives ? Colors.red : Colors.grey[300],
+                          size: 20,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () => widget.onClose(),
+                    onTap: _handleClose,
                     child: const Icon(
                       Icons.close,
                       color: Colors.grey,
@@ -488,50 +590,50 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
             // 2. Content Area
             Expanded(child: _buildBodyContent()),
 
-            if (!_isCompleted)
+            if (!_isCompleted && _lives > 0 && !_isLoading)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        _currentIndex--;
-                      }),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Colors.grey,
-                        size: 20,
-                      ),
-                    ),
                     Expanded(
                       child: TextButton(
                         onPressed: () {
-                          // SKIP
-                          setState(() {
-                            if (_answerStatus.length <= _currentIndex) {
-                              _answerStatus.add(AnswerStatus.unanswer);
-                            }
-                          });
-                          _nextExercise();
+                          if (_preparationData != null &&
+                              !_isPreparationCompleted) {
+                            // Skip Preparation
+                            setState(() {
+                              _isPreparationCompleted = true;
+                            });
+                          } else {
+                            // SKIP Question
+                            setState(() {
+                              if (_answerStatus.length <= _currentIndex) {
+                                _answerStatus.add(AnswerStatus.unanswer);
+                              }
+                              if (_lives > 0) _lives--;
+                            });
+                            _nextExercise();
+                          }
                         },
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.grey,
                         ),
-                        child: const Text(
-                          "Skip Question",
-                          style: TextStyle(fontSize: 14),
+                        child: Row(
+                          mainAxisAlignment: .center,
+                          children: [
+                            Text(
+                              (_preparationData != null &&
+                                      !_isPreparationCompleted)
+                                  ? "Skip Preparation"
+                                  : "Skip Question",
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                            if (_isPreparationCompleted)
+                              FaIcon(FontAwesomeIcons.heartCrack, size: 14),
+                          ],
                         ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        _currentIndex++;
-                      }),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey,
-                        size: 20,
                       ),
                     ),
                   ],
@@ -562,6 +664,16 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
   }
 
   Widget _buildBodyContent() {
+    if (_lives <= 0) {
+      return QuizFailedScreen(
+        onRetry: () {
+          // Retry logic if needed, currently just closes to retry externally
+          _handleClose();
+        },
+        onClose: _handleClose,
+      );
+    }
+
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primaryBrand),
@@ -597,6 +709,18 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
       return const Center(child: Text("No exercises found"));
     }
 
+    if (_preparationData != null && !_isPreparationCompleted) {
+      return WordPreparationScreen(
+        data: _preparationData!,
+        onComplete: () {
+          setState(() {
+            _isPreparationCompleted = true;
+          });
+        },
+        videoId: widget.videoId,
+      );
+    }
+
     if (_isCompleted) {
       return _buildCompletionScreen();
     }
@@ -621,107 +745,50 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
   }
 
   Widget _buildCompletionScreen() {
-    final percentage = _exercises.isNotEmpty
-        ? (_correctCount / _exercises.length * 100).round()
-        : 0;
-
-    final bool isSuccess =
-        _exercises.isNotEmpty && (_correctCount / _exercises.length) > 0.5;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            isSuccess ? "Awesome! 🎉" : "Good Try!",
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMain,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            "You answered $_correctCount/${_exercises.length} correctly ($percentage%).",
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-
-          if (isSuccess) ...[
-            const SizedBox(height: AppSpacing.xl),
-            const Text(
-              "Total Reward",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.pandaBlack,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/paw.png',
-                  width: 40,
-                  height: 40,
-                  key: _pawIconKey, // Start position for animation
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "x ${_exercises.length}", // Just using total exercises as reward count?
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.accent,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PandaButton(
-              width: 200,
-              onPressed: _claimRewardAndFly, // Claims and Shows animation
-              text: "Claim",
-            ),
-          ] else ...[
-            const SizedBox(height: AppSpacing.xl),
-            PandaButton(
-              width: 200,
-              onPressed: _handleNextVideoOrReset,
-              text: "Continue", // Or "Try Again"?
-            ),
-          ],
-        ],
-      ),
+    return QuizCompletionScreen(
+      exercises: _exercises,
+      correctCount: _correctCount,
+      onContinue: _handleNextVideoOrReset,
+      onClaim: _handleNextVideoOrReset,
+      videoId: widget.videoId,
     );
   }
 
+  void _handleWrongAnswer(ExerciseModel exercise) {
+    setState(() {
+      if (_answerStatus.length <= _currentIndex) {
+        _answerStatus.add(AnswerStatus.wrong);
+      } else {
+        _answerStatus[_currentIndex] = AnswerStatus.wrong;
+      }
+      if (_lives > 0) _lives--;
+    });
+
+    final correctAnswer = _getExerciseCorrectAnswer(exercise);
+
+    // If lost last life, wait a bit then show fail screen?
+    // Or show feedback first?
+    // Let's show feedback, then on "Next" check lives.
+
+    _showFeedback(false, correctAnswer: correctAnswer);
+  }
+
   Widget _buildExerciseContent(ExerciseModel exercise) {
+    final Key exerciseKey = ValueKey("exercise_${exercise.id}");
     switch (exercise.type) {
       case 'word_quiz':
         return WordQuizWidget(
+          key: exerciseKey,
           data: WordQuizData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
+          onWrong: () => _handleWrongAnswer(exercise),
         );
       case 'scramble':
         return ScrambleWidget(
+          key: exerciseKey,
           data: ScrambleData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
-          onWrong: () {
-            setState(() {
-              if (_answerStatus.length <= _currentIndex) {
-                _answerStatus.add(AnswerStatus.wrong);
-              } else {
-                _answerStatus[_currentIndex] = AnswerStatus.wrong;
-              }
-              if (_lives > 0) _lives--;
-            });
-            final correctAnswer = _getExerciseCorrectAnswer(exercise);
-            _showFeedback(false, correctAnswer: correctAnswer);
-          },
+          onWrong: () => _handleWrongAnswer(exercise),
           audioUrl: widget.audioUrl,
           onPlayAudio: _playAudio,
           onPauseAudio: _pauseAudio,
@@ -729,25 +796,16 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
         );
       case 'video_understanding':
         return VideoUnderstandingWidget(
+          key: exerciseKey,
           data: VideoUnderstandingData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
         );
       case 'cloze':
         return ClozeWidget(
+          key: exerciseKey,
           data: ClozeData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
-          onWrong: () {
-            setState(() {
-              if (_answerStatus.length <= _currentIndex) {
-                _answerStatus.add(AnswerStatus.wrong);
-              } else {
-                _answerStatus[_currentIndex] = AnswerStatus.wrong;
-              }
-              if (_lives > 0) _lives--;
-            });
-            final correctAnswer = _getExerciseCorrectAnswer(exercise);
-            _showFeedback(false, correctAnswer: correctAnswer);
-          },
+          onWrong: () => _handleWrongAnswer(exercise),
           audioUrl: widget.audioUrl,
           onPlayAudio: _playAudio,
           onPauseAudio: _pauseAudio,
@@ -755,19 +813,10 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
         );
       case 'parrot':
         return ParrotWidget(
+          key: exerciseKey,
           data: ParrotData.fromJson(exercise.data),
           onCorrect: () => _handleAnswer(true),
-          onWrong: () {
-            setState(() {
-              if (_answerStatus.length <= _currentIndex) {
-                _answerStatus.add(AnswerStatus.wrong);
-              } else {
-                _answerStatus[_currentIndex] = AnswerStatus.wrong;
-              }
-              if (_lives > 0) _lives--;
-            });
-            _showFeedback(false);
-          },
+          onWrong: () => _handleWrongAnswer(exercise),
           audioUrl: widget.audioUrl,
           onPlayAudio: _playAudio,
           onPauseAudio: _pauseAudio,

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pandascroll/src/features/feed/presentation/widgets/daily_goal/daily_goal_widget.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../controllers/video_controller.dart';
-import '../controllers/daily_goal_controller.dart';
+import '../widgets/daily_goal/language_level_widget.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../widgets/interaction_panel.dart';
 import '../widgets/video_post.dart';
@@ -24,13 +23,15 @@ class _FeedViewState extends ConsumerState<FeedView> {
   bool _isPanelOpen = false;
   Widget _panelContent = const SizedBox();
   String _panelTitle = "";
+  bool _barrierDismissible = true;
   String _currentTab = "Feed";
 
-  void _openPanel(String title, Widget content) {
+  void _openPanel(String title, Widget content, {bool? barrierDismissible}) {
     setState(() {
       _panelTitle = title;
       _panelContent = content;
       _isPanelOpen = true;
+      _barrierDismissible = barrierDismissible ?? true;
     });
   }
 
@@ -91,46 +92,26 @@ class _FeedViewState extends ConsumerState<FeedView> {
                 alignment: Alignment.topCenter,
 
                 children: [
-                  // Daily Goal (Left)
+                  // Language Level (Left)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: PointerInterceptor(child: const DailyGoalWidget()),
+                    child: PointerInterceptor(
+                      child: const LanguageLevelWidget(),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Barrier (Click to close panel)
-          if (_isPanelOpen)
-            Positioned.fill(
-              child: PointerInterceptor(
-                child: GestureDetector(
-                  onTap: _closePanel,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    color: Colors.black54, // Dim background for focus
-                  ),
-                ),
-              ),
-            ),
-
-          // Interaction Panel (Animated)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            left: 0,
-            right: 0,
-            bottom: _isPanelOpen
-                ? 0
-                : -MediaQuery.of(context).size.height * 0.75,
-            height: MediaQuery.of(context).size.height * 0.75,
-            child: PointerInterceptor(
-              child: InteractionPanel(
-                title: _panelTitle,
-                onClose: _closePanel,
-                child: _panelContent,
-              ),
+          // Interaction Panel (Self-contained)
+          Positioned.fill(
+            child: InteractionPanel(
+              title: _panelTitle,
+              onClose: _closePanel,
+              isVisible: _isPanelOpen,
+              barrierDismissible: _barrierDismissible,
+              child: _panelContent,
             ),
           ),
         ],
@@ -184,7 +165,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
 class _VideoPageFeed extends ConsumerWidget {
   final PageController pageController;
   final bool isPanelOpen;
-  final Function(String, Widget) onOpenPanel;
+  final Function(String, Widget, {bool? barrierDismissible}) onOpenPanel;
   final Function(String) onUpdateTitle;
   final Function() onClosePanel;
 
@@ -236,10 +217,13 @@ class _VideoPageFeed extends ConsumerWidget {
                 }
               },
             ),
+            barrierDismissible: false,
           ),
-          onShowComments: () =>
-              onOpenPanel("Comments 💬", const CommentsPanel()),
-          onShowPanel: onOpenPanel,
+          onShowComments: () => onOpenPanel(
+            "Comments 💬",
+            CommentsPanel(videoId: videos[index].id),
+          ),
+          onShowPanel: (title, widget) => onOpenPanel(title, widget),
           onSkip: () {
             if (index < videos.length - 1) {
               pageController.animateToPage(

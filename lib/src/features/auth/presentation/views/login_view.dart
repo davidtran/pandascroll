@@ -8,6 +8,7 @@ import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_b
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../feed/presentation/views/feed_view.dart';
+import '../../../onboarding/presentation/views/onboarding_view.dart';
 import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 import '../../../profile/data/profile_repository.dart';
 
@@ -22,29 +23,54 @@ class LoginView extends ConsumerWidget {
     ref.listen(authProvider, (previous, next) async {
       if (next.value == true) {
         // Logged in successfully.
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        if (userId == null) return;
 
-        // check if we have pending onboarding data
+        bool hasProfile = false;
+
+        // 1. Check if we have pending onboarding data to save
         final onboardingState = ref.read(onboardingProvider);
         if (onboardingState.nativeLanguage != null) {
-          // We have data, let's save it
           try {
-            final userId = Supabase.instance.client.auth.currentUser?.id;
-            if (userId != null) {
-              await ref
-                  .read(profileRepositoryProvider)
-                  .updateProfile(userId, onboardingState);
+            await ref
+                .read(profileRepositoryProvider)
+                .updateProfile(userId, onboardingState);
+            hasProfile = true; // We just created/updated it
+          } catch (e) {
+            debugPrint("Failed to save profile on login: $e");
+          }
+        } else {
+          // 2. No pending data, check if profile exists in DB
+          try {
+            final data = await Supabase.instance.client
+                .from('profiles')
+                .select()
+                .eq('id', userId)
+                .maybeSingle();
+            if (data != null) {
+              hasProfile = true;
             }
           } catch (e) {
-            // Silently fail or log? Proceed to feed anyway.
-            debugPrint("Failed to save profile on login: $e");
+            debugPrint("Error checking profile: $e");
           }
         }
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const FeedView()),
-          (route) => false,
-        );
+        // 3. Navigate based on profile existence
+        if (context.mounted) {
+          if (hasProfile) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const FeedView()),
+              (route) => false,
+            );
+          } else {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const OnboardingView()),
+              (route) => false,
+            );
+          }
+        }
       }
     });
 
@@ -95,7 +121,7 @@ class LoginView extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        "Welcome",
+                        "welcome",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 36,
@@ -111,7 +137,7 @@ class LoginView extends ConsumerWidget {
 
                   const SizedBox(height: 8),
                   Text(
-                    "Sign in to sync your progress",
+                    "sign in to sync your progress",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
@@ -127,7 +153,7 @@ class LoginView extends ConsumerWidget {
                   else ...[
                     // Google Button
                     PandaButton(
-                      text: "Continue with Google",
+                      text: "continue with Google",
                       leading: FaIcon(FontAwesomeIcons.google),
                       onPressed: () {
                         ref.read(authProvider.notifier).signInWithGoogle();
@@ -137,7 +163,7 @@ class LoginView extends ConsumerWidget {
 
                     // Apple Button
                     PandaButton(
-                      text: "Continue with Apple",
+                      text: "continue with Apple",
                       leading: FaIcon(FontAwesomeIcons.apple),
                       onPressed: () {
                         ref.read(authProvider.notifier).signInWithApple();
@@ -146,20 +172,6 @@ class LoginView extends ConsumerWidget {
                       textColor: AppColors.pandaBlack,
                       borderColor: Colors.black,
                     ),
-
-                    if (kIsWeb) ...[
-                      const SizedBox(height: 16),
-                      PandaButton(
-                        text: "Anoymous login",
-                        leading: FaIcon(FontAwesomeIcons.apple),
-                        onPressed: () {
-                          ref.read(authProvider.notifier).signInAnonymously();
-                        },
-                        backgroundColor: Colors.white,
-                        textColor: AppColors.pandaBlack,
-                        borderColor: Colors.black,
-                      ),
-                    ],
                   ],
                 ],
               ),
@@ -191,50 +203,6 @@ class LoginView extends ConsumerWidget {
           ],
         ),
         child: Icon(icon, color: AppColors.textMain, size: 24),
-      ),
-    );
-  }
-}
-
-class _LoginButton extends StatelessWidget {
-  final String text;
-  final String icon;
-  final VoidCallback onPressed;
-
-  const _LoginButton({
-    required this.text,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        foregroundColor: AppColors.textMain,
-        backgroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey[200]!, width: 2),
-        ),
-        elevation: 0,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(icon, height: 24),
-          const SizedBox(width: 12),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Nunito',
-            ),
-          ),
-        ],
       ),
     );
   }

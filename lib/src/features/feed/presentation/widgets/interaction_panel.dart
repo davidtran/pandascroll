@@ -1,20 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/theme/app_dimens.dart';
 
-class InteractionPanel extends StatelessWidget {
+class InteractionPanel extends StatefulWidget {
   final VoidCallback onClose;
   final String title;
   final Widget child;
+  final String? videoId;
+  final bool isVisible; // Added isVisible property
 
   const InteractionPanel({
     super.key,
     required this.onClose,
     required this.title,
     required this.child,
+    this.videoId,
+    required this.isVisible,
+    this.barrierDismissible = true,
   });
+
+  final bool barrierDismissible;
+
+  @override
+  InteractionPanelWidget createState() => InteractionPanelWidget();
+}
+
+class InteractionPanelWidget extends State<InteractionPanel> {
+  Key _contentKey = UniqueKey();
+
+  void handleClose() {
+    setState(() {
+      _contentKey = UniqueKey();
+    });
+    widget.onClose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final panelHeight = screenHeight * 0.75;
+
+    return Stack(
+      children: [
+        // Barrier
+        if (widget.isVisible)
+          Positioned.fill(
+            child: PointerInterceptor(
+              child: GestureDetector(
+                onTap: widget.barrierDismissible ? handleClose : null,
+                behavior: HitTestBehavior.opaque,
+                child: Container(color: Colors.black54),
+              ),
+            ),
+          ),
+
+        // Sliding Panel
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          left: 0,
+          right: 0,
+          bottom: widget.isVisible ? 0 : -panelHeight,
+          height: panelHeight,
+          child: PointerInterceptor(
+            child: _buildPanelContent(), // Call the new method for content
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Moved existing content logic to a new private method
+  Widget _buildPanelContent() {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -29,7 +86,7 @@ class InteractionPanel extends StatelessWidget {
             onVerticalDragEnd: (details) {
               if (details.primaryVelocity != null &&
                   details.primaryVelocity! > 300) {
-                onClose();
+                handleClose();
               }
             },
             behavior: HitTestBehavior.translucent,
@@ -49,29 +106,7 @@ class InteractionPanel extends StatelessWidget {
             ),
           ),
 
-          // Header removed (moved to children)
-          // Padding(
-          //   padding: const EdgeInsets.all(AppSpacing.md),
-          //   child: Row(
-          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //     children: [
-          //       Text(
-          //         title,
-          //         style: Theme.of(
-          //           context,
-          //         ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          //       ),
-          //       IconButton(
-          //         icon: const Icon(Icons.close_rounded),
-          //         onPressed: onClose,
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          // const Divider(height: 1),
-
-          // Content
-          Expanded(child: child),
+          Expanded(key: _contentKey, child: widget.child),
         ],
       ),
     );

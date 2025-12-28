@@ -6,11 +6,13 @@ import '../../../domain/models/exercise_model.dart';
 class WordQuizWidget extends StatefulWidget {
   final WordQuizData data;
   final VoidCallback onCorrect;
+  final VoidCallback onWrong;
 
   const WordQuizWidget({
     super.key,
     required this.data,
     required this.onCorrect,
+    required this.onWrong,
   });
 
   @override
@@ -24,7 +26,7 @@ class _WordQuizWidgetState extends State<WordQuizWidget> {
   @override
   void didUpdateWidget(WordQuizWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data != oldWidget.data) {
+    if (widget.key != oldWidget.key) {
       setState(() {
         _selectedOption = null;
         _isAnswered = false;
@@ -41,7 +43,9 @@ class _WordQuizWidgetState extends State<WordQuizWidget> {
     });
 
     if (option == widget.data.correctMeaning) {
-      Future.delayed(const Duration(milliseconds: 1000), widget.onCorrect);
+      widget.onCorrect();
+    } else {
+      widget.onWrong();
     }
   }
 

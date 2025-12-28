@@ -53,7 +53,7 @@ class _ClozeWidgetState extends State<ClozeWidget> {
   @override
   void didUpdateWidget(ClozeWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data != oldWidget.data) {
+    if (widget.key != oldWidget.key) {
       _resetState();
       // _initAudio(); // Removed
     }

@@ -21,7 +21,10 @@ class YouTubePlayer extends StatelessWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.seekStream,
   });
+
+  final Stream<int>? seekStream;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +35,7 @@ class YouTubePlayer extends StatelessWidget {
         onCurrentTime: onCurrentTime,
         onStateChange: onStateChange,
         onEnded: onEnded,
+        seekStream: seekStream,
       );
     } else {
       return YouTubePlayerMobile(
@@ -40,6 +44,7 @@ class YouTubePlayer extends StatelessWidget {
         onCurrentTime: onCurrentTime,
         onStateChange: onStateChange,
         onEnded: onEnded,
+        seekStream: seekStream,
       );
     }
   }

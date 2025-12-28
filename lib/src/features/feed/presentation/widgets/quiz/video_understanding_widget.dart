@@ -25,7 +25,7 @@ class _VideoUnderstandingWidgetState extends State<VideoUnderstandingWidget> {
   @override
   void didUpdateWidget(VideoUnderstandingWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data != oldWidget.data) {
+    if (widget.key != oldWidget.key) {
       setState(() {
         _selectedOption = null;
         _isAnswered = false;
@@ -42,7 +42,7 @@ class _VideoUnderstandingWidgetState extends State<VideoUnderstandingWidget> {
     });
 
     if (option == widget.data.correctAnswer) {
-      Future.delayed(const Duration(milliseconds: 1000), widget.onCorrect);
+      widget.onCorrect();
     }
   }
 

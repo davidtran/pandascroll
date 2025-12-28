@@ -14,7 +14,7 @@ class LoginWelcomeText extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             const Text(
-              "Welcome ",
+              "welcome ",
               style: TextStyle(
                 fontFamily: 'Fredoka',
                 fontSize: 32,
@@ -30,7 +30,7 @@ class LoginWelcomeText extends StatelessWidget {
         const SizedBox(
           width: 280,
           child: Text(
-            "Pick up right where you left off with your daily lessons!",
+            "pick up right where you left off with your daily lessons!",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Nunito',

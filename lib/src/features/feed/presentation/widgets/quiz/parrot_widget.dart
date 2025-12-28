@@ -65,7 +65,7 @@ class _ParrotWidgetState extends State<ParrotWidget> {
   @override
   void didUpdateWidget(ParrotWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.data != oldWidget.data) {
+    if (widget.key != oldWidget.key) {
       _resetState();
       // _initAudio(); // Removed
     }

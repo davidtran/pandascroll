@@ -1,19 +1,27 @@
 import 'dart:async';
+
+import 'play_controls.dart';
+
+import '../../../profile/presentation/views/profile_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../data/stats_repository.dart';
 import '../../domain/models/video_model.dart';
 import '../../domain/models/dictionary_model.dart';
 import '../../../onboarding/presentation/widgets/panda_button.dart';
 import 'captions_overlay.dart';
+import 'comments_panel.dart';
 import 'dictionary_panel.dart';
 import 'players/tiktok_player.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'players/youtube_player.dart';
+import '../providers/stats_provider.dart';
 
 class VideoPost extends ConsumerStatefulWidget {
   final VideoModel video;
@@ -47,9 +55,12 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   bool _isPaused = false;
   Timer? _progressTimer;
   bool _isMuted = false;
+  bool _xpAwarded = false;
 
   // Notifiers for UI updates
   final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
+  final StreamController<int> _seekController =
+      StreamController<int>.broadcast();
 
   // Tutorial Keys
   final GlobalKey _captionsKey = GlobalKey();
@@ -57,9 +68,17 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   final GlobalKey _nextButtonKey = GlobalKey();
 
   TutorialCoachMark? tutorialCoachMark;
+  late StatsRepository _statsRepository;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _statsRepository = ref.read(statsRepositoryProvider);
+  }
 
   @override
   void dispose() {
+    _saveStats(widget.video);
     _stopTimer();
     _currentTimeNotifier.removeListener(_tutorialListener);
     _currentTimeNotifier.dispose();
@@ -107,6 +126,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
             onClose: () {
               Navigator.of(context).pop();
             },
+            videoId: widget.video.id,
           ),
         );
       }
@@ -143,6 +163,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     // Simplify: Reset on video change.
 
     if (widget.video.url != oldWidget.video.url) {
+      _saveStats(oldWidget.video);
       _handleVideoChanged();
     }
 
@@ -152,12 +173,37 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     }
   }
 
+  void _saveStats(VideoModel video) {
+    final duration = _currentTimeNotifier.value;
+    print('save stats');
+    print('video duration $duration');
+    if (duration > 1.0) {
+      // Only save if watched at least 1 second
+      _statsRepository.updateUserVideoStats(
+        videoId: video.id,
+        viewDuration: duration,
+        lastViewedAt: DateTime.now(),
+      );
+
+      // Add XP for watching video
+      if (!_xpAwarded) {
+        _xpAwarded = true;
+        ref
+            .read(userLanguageProfileProvider.notifier)
+            .addXp(event: 'watch_video', videoId: widget.video.id);
+      }
+    }
+  }
+
   void _handleVideoChanged() {
     setState(() {
       _currentTimeNotifier.value = 0.0;
       _isPaused = false;
+      _xpAwarded = false;
     });
   }
+
+  bool _isVideoLoaded = false;
 
   void _onPlayerStateChange(bool isPlaying) {
     if (isPlaying) {
@@ -165,6 +211,13 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       _startTimer();
       // Also ensure our UI reflects it (e.g. if autoplayed)
       if (_isPaused && mounted) setState(() => _isPaused = false);
+
+      // Mark as loaded once it starts playing
+      if (!_isVideoLoaded && mounted) {
+        setState(() {
+          _isVideoLoaded = true;
+        });
+      }
     } else {
       _stopTimer();
     }
@@ -172,6 +225,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
 
   void _onPlayerEnded() {
     _stopTimer();
+    _saveStats(widget.video);
     _currentTimeNotifier.value = 0.0;
     // Loop logic is often handled by the player (TikTok/YouTube loop params),
     // but if we need to manually restart:
@@ -189,10 +243,33 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     final effectiveIsPlaying =
         widget.isPlaying && !_isPaused && !widget.hideContent;
 
+    final isYouTube = widget.video.platformType.toLowerCase() == 'youtube';
+    String videoId = widget.video.externalId;
+    if (videoId.isEmpty) {
+      videoId = _extractVideoId(widget.video.url) ?? '';
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
         _buildPlayer(effectiveIsPlaying),
+
+        // Thumbnail Overlay (Only for YouTube for now as requested)
+        if (isYouTube && videoId.isNotEmpty)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: _isVideoLoaded ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 500),
+                child: Image.network(
+                  "https://img.youtube.com/vi/$videoId/maxresdefault.jpg",
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const SizedBox(), // Hide if fails
+                ),
+              ),
+            ),
+          ),
 
         // Removed: if (!_isInitialized) ... Loading indicator
         // We can add it back if the Players report "isLoaded" state,
@@ -268,9 +345,30 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 24,
-                        backgroundImage: NetworkImage(widget.video.authorUrl),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ProfileView(),
+                            ),
+                          );
+                        },
+                        child: Consumer(
+                          builder: (context, ref, child) {
+                            final profileAsync = ref.watch(userProfileProvider);
+                            final avatarUrl =
+                                profileAsync.value?['avatar_url'] as String?;
+
+                            return CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(
+                                avatarUrl ??
+                                    "https://lh3.googleusercontent.com/aida-public/AB6AXuANlJyF7pvtcA0vFRyJEQFa7XkoUIgUyQWhE4Gc5CZE8a4qkbeRdMDmCCNIqHtI5LhZkzSGSyBvbeCZz0oq0FcN3KL1M-MvQ2l4sJ1mjtyIoIfghT_RcENVTfhs5UmfWeF3Hy_lunl8MS3gOi6healG8WlHFAwKXJvg1o-2dbVwZ9NWy5seJpd-Y0ppzUuDydRuCBKS8aXs7q-0XAYayTXRuct4XnkgMaCvJzy8ef9tfS5sXuoBtbz3tcoEn-kaFdYvJebPEUqDxoE",
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -286,18 +384,18 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                 ),
                 const SizedBox(height: 20),
 
-                // Comment
                 _buildActionItem(
                   Icons.chat_bubble_rounded,
-                  "342",
+                  "342", // TODO: Real count
                   Colors.white,
                   onTap: () {
-                    widget.onShowComments();
-                    print('toggle comment');
+                    widget.onShowPanel(
+                      "Comments 💬",
+                      CommentsPanel(videoId: widget.video.id),
+                    );
                   },
                   size: 24,
                 ),
-
                 const SizedBox(height: 20),
                 _buildActionItem(
                   settings.captions
@@ -353,6 +451,18 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                           offset: Offset(0, 2),
                         ),
                       ],
+                    ),
+                  ),
+
+                // Play Controls
+                if (widget.video.platformType.toLowerCase() == 'youtube')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: PlayControls(
+                      isPlaying: effectiveIsPlaying,
+                      onPlayPause: _togglePlayPause,
+                      onRewind: () => _seekController.add(-5),
+                      onForward: () => _seekController.add(5),
                     ),
                   ),
               ],
@@ -501,6 +611,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         },
         onStateChange: _onPlayerStateChange,
         onEnded: _onPlayerEnded,
+        seekStream: _seekController.stream,
       );
     }
 

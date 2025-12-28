@@ -22,29 +22,29 @@ class AppSettings {
 class SettingsNotifier extends Notifier<AppSettings> {
   static const _captionKey = 'show_captions';
   static const _audioKey = 'toggle_audio';
-  late SharedPreferences _prefs;
+  SharedPreferences? _prefs;
 
   @override
   AppSettings build() {
-    _init();
-    return state;
+    _loadSettings();
+    return const AppSettings();
   }
 
-  Future<void> _init() async {
+  Future<void> _loadSettings() async {
     _prefs = await SharedPreferences.getInstance();
     state = AppSettings(
-      captions: _prefs.getBool(_captionKey) ?? true,
-      volume: _prefs.getBool(_audioKey) ?? true,
+      captions: _prefs?.getBool(_captionKey) ?? true,
+      volume: _prefs?.getBool(_audioKey) ?? true,
     );
   }
 
   Future<void> toggleCaptions() async {
     state = state.copyWith(captions: !state.captions);
-    await _prefs.setBool(_captionKey, state.captions);
+    await _prefs?.setBool(_captionKey, state.captions);
   }
 
   Future<void> toggleAudio() async {
     state = state.copyWith(volume: !state.volume);
-    await _prefs.setBool(_audioKey, state.volume);
+    await _prefs?.setBool(_audioKey, state.volume);
   }
 }

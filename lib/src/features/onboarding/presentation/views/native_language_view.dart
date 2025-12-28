@@ -2,76 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
+import '../../../../core/constants/language_constants.dart';
 import '../providers/onboarding_provider.dart';
 import 'target_language_view.dart';
 import '../widgets/panda_button.dart';
-import '../widgets/selectable_option_card.dart';
+import '../widgets/language_selector_widget.dart';
 
 class NativeLanguageView extends ConsumerWidget {
   const NativeLanguageView({super.key});
-
-  // Mock data as per design
-  final List<Map<String, String>> _suggestedLanguages = const [
-    {
-      'code': 'en',
-      'name': 'English',
-      'native': 'English',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuB3o9h13vMUw0UlVF3KGfZ_GibGHgDzzI4cUYybLts9J2ZrM8v006e9A91nnplDP4TBmu3C3cqbGG_SVG9wtG1UOXqklHUUFdWGvvQ0dcqlXLHrdLIytG6I2HE4zRadCKpOYm_vnjXgc4DIa5eRfJvlC9HbTicodMY7fVXJ93LD2S2H-biRrfFoG5-Au1SxC-BoYcLpdhL81FI45PfguWBJA8onzM3ePPF-JKLk9BMiJuOzaOAdzZmf0sxNzHvyGJ3dQYggEf4GRpk',
-    },
-    {
-      'code': 'es',
-      'name': 'Spanish',
-      'native': 'Español',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAECg0tPmVV8fo0cpg60DTlKjut-5A6zUT57ZcLUtLACWFnvv4-GmINVYnddPWgBu5rNd9s2reqd3GTB71TikA7HEZwap9QUUWphOG94qwPWCYMUwc1xAh-aAWiE4dd0mTd9JUmvgKtqzAVLVwL7ITVI6hHQMwTD6NLv-VFnCjpxDHvGDL99V4LyKWXzr343m52lWVJUgApMAqyCYFU6hwMUOsco1M5d6SvP_i21IGMJqjFLHh5YeDY8t5NL7P3WrkYgR5-nlpmKEw',
-    },
-  ];
-
-  final List<Map<String, String>> _allLanguages = const [
-    {
-      'code': 'fr',
-      'name': 'French',
-      'native': 'Français',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDwOm5KmmFIac7iciPwsWWR4e__D4dPGDx83ROBvFEF8W5Z2r5c6tnbaC2pPSJrcvR0V6yQGEIUN0EEXi6Ct4esoEoxFhCAUj6zhS7kY8dmGBzcd3G4s0HXwdchth1hqSRqMFhnxKherszvl-D5gqBwVfFRPXolakN3LDtN7GcYGRlumy7jSPYwTwYwsQ9bW50rNQ7WiS1RascDQtWToTrqTDD4ahTuUnyvGxKUgX0L12d1MDiSszEjon02ZdBF2usbFqcJlllTjEE',
-    },
-    {
-      'code': 'de',
-      'name': 'German',
-      'native': 'Deutsch',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBHmhqJoZsTIjCSZMQp28s8jBVIZgQ7RxXIK7o3nZUHm7Cgx9Bj85fd-JVnzzKQBbOtQWwp_E5NZ30BJX7II3yp-sR0Kw7tvVjk_bUv06ZOaiD7S6FUOvVwn8sGehuxQwBGHn_3Gf7PYw7WqqFWKNRdng89OOEDvDT8gHEiIGd4o3rIxG7EuIIgh4CIdI_UXu2WsLmWPebnWiYuAf_ZCoVeopRmWIR8bViUx8riI3s45in5s_VA6ZBJxmnYzjLBrrbKuO3vBc2i8Rs',
-    },
-    {
-      'code': 'jp',
-      'name': 'Japanese',
-      'native': '日本語',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBwYfUyX0byXwlYqptM4PnWwZdStwI4R-XylHm3-ogLozSEUXewMzi8jzp_welEzXElKWF3nln7-c8oNuzlrcPCEgCLRrbP2yOfeBaSJYC0XquGso6Tsl0WlKomBeHcVmWiPt900bSeDaJHlQGilRkjCq3m7z8Krf0onW_QmfRlY06_YOc2YjihXe2x9HifpQWvNrd89-wYg_sQuoR0jhlWhgbefOYhXRj6ISsRJeJLeZ5WuKgVEYDinM2T8YicGk2sGKjApwSIuxo',
-    },
-    {
-      'code': 'cn',
-      'name': 'Chinese',
-      'native': '中文',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBp76FMK1clf0RSjXXjSEP95JDYe7KyWPLzeHN8o9ki1b5iIhdWF_JV9SEvdQxnlKoq7Wg07mSuPWs8auuEdQih_4fvjALgMWGsUXRSQ6TzAm0nCZDwX54-VIh0-Hns4nlTcrihwbKo4jKQakgkY90miEKt6ATzZ4XjBrXhl2X8AVeYs7wUysqx7GyJo8EaRkbdrx3iuBhdAaidFySzkVdSeVZiFOx0CkmZycmVB5XNXkJQwq_7CVxTlVAji06wkLS4XFYZWTdlX9s',
-    },
-    {
-      'code': 'kr',
-      'name': 'Korean',
-      'native': '한국어',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuA1PC1nsXp9OvwgQuD4vA_mq6-lFsgJ94vIh0H8gVf-Gd3fJZXabnGezXd4e25_leUzLFjvLF2L_7JyYPkSepdf8k0uRYvZ5aSJRJMvr8kPx9URogpxYreirui6KdwyjKubfjwUGEViLB2l87x5JTHe9eZEiSjjeDx1fHr4wIp0p1i-boGVYkmWUtaTlJAqZZBoCxBZ4MwsDA6JNPmACXzsMpucGXsFD5txq9TkpUgWBTp3yWNH3RrRZbUeWycbkLrJVDxTC7I0WBU',
-    },
-    {
-      'code': 'pt',
-      'name': 'Portuguese',
-      'native': 'Português',
-      'flagUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuD3S9zIxo4YYVcX4a1fQOdFliN5UYl_zqk6Bgm2-nzBZVqCr7J78SPJnvBPS5XunRN60_SiHhRgvq787vw1RJmmAugtyI2-jZSyP0YK3QAoAYG-kqs5aBcWmUmPkv_qT3WqE7I2PGH8vKujDE9PshVXVBmL6fpwrPgwLwNqTOa8Q4qa1WIHOTVn-XCLy8YySG1sn9IJsEGW3hDo0ClHkq7Giu-si8ALHZbdddOdNInStiOLmZ4YE6LnvGyfX0ol0xco3Ua9fHqJxt8',
-    },
-  ];
 
   void _onContinue(BuildContext context, WidgetRef ref) {
     final selectedLangCode = ref.read(onboardingProvider).nativeLanguage;
@@ -87,8 +25,10 @@ class NativeLanguageView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     const Color creamBg = Color(0xFFFEFDF5);
     const Color bgLight = Color(0xFFF0FDF4); // bg-background-light
-    const Color primaryColor = AppColors.bambooGreen; // 0xFF4ADE80
+
     const Color textMain = Color(0xFF1E293B); // text-main
+
+    final currentCode = ref.watch(onboardingProvider).nativeLanguage;
 
     return Scaffold(
       backgroundColor: creamBg,
@@ -137,22 +77,42 @@ class NativeLanguageView extends ConsumerWidget {
 
                 // Language List
                 Expanded(
-                  child: ListView(
+                  child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-                    children: [
-                      // Suggested
-                      _buildSectionHeader("Suggested", Icons.star_rounded),
-                      ..._suggestedLanguages.map(
-                        (l) => _buildLanguageTile(l, ref),
-                      ),
-                      const SizedBox(height: 24),
-                      // All Languages
-                      _buildSectionHeader(
-                        "All Languages",
-                        Icons.public_rounded,
-                      ),
-                      ..._allLanguages.map((l) => _buildLanguageTile(l, ref)),
-                    ],
+                    child: Column(
+                      children: [
+                        // Suggested
+                        _buildSectionHeader("Suggested", Icons.star_rounded),
+                        LanguageSelectorWidget(
+                          languages: LanguageConstants.nativeLanguages
+                              .where((l) => ['en', 'es'].contains(l.code))
+                              .toList(),
+                          selectedLanguageCode: currentCode,
+                          onSelected: (code) {
+                            ref
+                                .read(onboardingProvider.notifier)
+                                .setNativeLanguage(code);
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // All Languages
+                        _buildSectionHeader(
+                          "All Languages",
+                          Icons.public_rounded,
+                        ),
+                        LanguageSelectorWidget(
+                          languages: LanguageConstants.nativeLanguages
+                              .where((l) => !['en', 'es'].contains(l.code))
+                              .toList(),
+                          selectedLanguageCode: currentCode,
+                          onSelected: (code) {
+                            ref
+                                .read(onboardingProvider.notifier)
+                                .setNativeLanguage(code);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -230,22 +190,6 @@ class NativeLanguageView extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLanguageTile(Map<String, String> lang, WidgetRef ref) {
-    final currentCode = ref.watch(onboardingProvider).nativeLanguage;
-    final bool isSelected = currentCode == lang['code'];
-    final Color primary = AppColors.bambooGreen;
-
-    return SelectableOptionCard(
-      title: lang['name']!,
-      subtitle: lang['native']!,
-
-      isSelected: isSelected,
-      onTap: () {
-        ref.read(onboardingProvider.notifier).setNativeLanguage(lang['code']!);
-      },
     );
   }
 }

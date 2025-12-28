@@ -8,6 +8,7 @@ class YouTubePlayerWeb extends StatefulWidget {
   final Function(double) onCurrentTime;
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
+  final Stream<int>? seekStream;
 
   const YouTubePlayerWeb({
     super.key,
@@ -16,6 +17,7 @@ class YouTubePlayerWeb extends StatefulWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.seekStream,
   });
 
   @override
@@ -32,6 +34,11 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
   void initState() {
     super.initState();
     _initializeController();
+    widget.seekStream?.listen((seconds) async {
+      if (!mounted) return;
+      final currentPos = await _controller.currentTime;
+      _controller.seekTo(seconds: currentPos + seconds);
+    });
   }
 
   void _initializeController() {

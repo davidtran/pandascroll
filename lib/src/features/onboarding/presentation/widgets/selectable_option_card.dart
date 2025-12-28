@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pandascroll/src/core/theme/app_theme.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_dimens.dart';
 
 class SelectableOptionCard extends StatefulWidget {
   final String title;

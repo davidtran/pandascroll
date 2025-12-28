@@ -6,6 +6,7 @@ import 'src/features/onboarding/presentation/views/landing_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/features/auth/presentation/controllers/auth_controller.dart';
+import 'src/features/auth/presentation/views/root_view.dart';
 import 'src/features/feed/presentation/views/feed_view.dart';
 
 import 'src/core/utils/navigation.dart';
@@ -36,11 +37,7 @@ class MyApp extends ConsumerWidget {
       navigatorKey: navigatorKey,
       title: 'PandaScroll',
       theme: AppTheme.lightTheme,
-      home: authState.when(
-        data: (isAuthenticated) => isAuthenticated ? FeedView() : LandingView(),
-        error: (error, stackTrace) => LandingView(),
-        loading: () => LandingView(),
-      ),
+      home: const RootView(),
       debugShowCheckedModeBanner: false,
     );
   }

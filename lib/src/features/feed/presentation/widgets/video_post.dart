@@ -128,6 +128,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
               Navigator.of(context).pop();
             },
             videoId: widget.video.id,
+            language: widget.video.language,
           ),
         );
       }
@@ -574,6 +575,18 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     return null;
   }
 
+  void _handleCurrentTime(double time) {
+    // Sync the notifier
+    _currentTimeNotifier.value = time;
+
+    // Handle the "loaded" state check
+    if (!_isVideoLoaded && time > 0 && mounted) {
+      setState(() {
+        _isVideoLoaded = true;
+      });
+    }
+  }
+
   Widget _buildPlayer(bool isPlaying) {
     final isYouTube = widget.video.platformType.toLowerCase() == 'youtube';
 
@@ -587,15 +600,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       return YouTubePlayer(
         videoId: videoId,
         isPlaying: isPlaying,
-        onCurrentTime: (time) {
-          // Sync timer
-          _currentTimeNotifier.value = time;
-          if (!_isVideoLoaded && time > 0 && mounted) {
-            setState(() {
-              _isVideoLoaded = true;
-            });
-          }
-        },
+        onCurrentTime: _handleCurrentTime,
         onStateChange: _onPlayerStateChange,
         onEnded: _onPlayerEnded,
         seekStream: _seekController.stream,

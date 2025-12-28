@@ -184,6 +184,11 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for external updates (e.g. adding a new card)
+    ref.listen(flashcardsUpdateTriggerProvider, (_, __) {
+      _loadCards();
+    });
+
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF102219), // panda-black
@@ -201,26 +206,26 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
 
     if (_reviewQueue.isEmpty) {
       if (_totalCards == 0) {
-        return const Scaffold(
-          backgroundColor: Color(0xFF102219),
+        return Scaffold(
+          backgroundColor: Colors.black,
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.save_alt_rounded, color: Colors.white54, size: 64),
-                SizedBox(height: 16),
+                Image.asset('assets/images/panda_study.png', height: 128),
+                const SizedBox(height: 16),
                 Text(
-                  "No cards yet!",
+                  "no cards yet!",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Nunito',
+                    fontFamily: 'Fredoka',
                   ),
                 ),
                 SizedBox(height: 8),
                 Text(
-                  "Save words to start memorizing.",
+                  "save words to start memorizing.",
                   style: TextStyle(color: Colors.white54, fontSize: 16),
                 ),
               ],
@@ -242,7 +247,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
               ),
               SizedBox(height: 24),
               Text(
-                "All caught up!",
+                "all caught up!",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 31,
@@ -252,7 +257,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
               ),
               SizedBox(height: 8),
               Text(
-                "The words in this stack will reappear later.",
+                "the words in this stack will reappear later.",
                 style: TextStyle(
                   color: Colors.white54,
                   fontSize: 21,

@@ -117,10 +117,10 @@ class _LanguageLevelWidgetState extends ConsumerState<LanguageLevelWidget> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      SizedBox(
-                        width: 80, // Slightly reduced width to fit paw
-                        child: StripeProgressBar(progress: progress),
-                      ),
+                      // SizedBox(
+                      //   width: 80, // Slightly reduced width to fit paw
+                      //   child: StripeProgressBar(progress: progress),
+                      // ),
                       const SizedBox(width: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(

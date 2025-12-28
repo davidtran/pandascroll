@@ -8,12 +8,14 @@ class DictionaryPanel extends ConsumerWidget {
   final DictionaryModel data;
   final VoidCallback onClose; // Added callback
   final String? videoId; // Passed from parent
+  final String language; // Passed from parent
 
   const DictionaryPanel({
     super.key,
     required this.data,
     required this.onClose,
     this.videoId,
+    required this.language,
   });
 
   @override
@@ -164,6 +166,7 @@ class DictionaryPanel extends ConsumerWidget {
                           // Add definition if available in model, or other details
                         ],
                         videoId: videoId,
+                        language: language,
                       );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

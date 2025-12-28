@@ -47,11 +47,10 @@ class CaptionsOverlay extends StatelessWidget {
     for (int i = 0; i < captions.length; i++) {
       final caption = captions[i];
       if (caption.words.isEmpty) continue;
-      final start = caption.words.first.start;
-      final end = caption.words.last.end;
 
-      // Add a small buffer to end time to prevent flickering between captions
-      if (currentTime >= start && currentTime < end) {
+      // Use the caption's full range
+      if (currentTime >= caption.words.first.start &&
+          currentTime <= caption.words.last.end) {
         return i;
       }
     }
@@ -59,7 +58,7 @@ class CaptionsOverlay extends StatelessWidget {
   }
 }
 
-class _CaptionContainer extends StatelessWidget {
+class _CaptionContainer extends StatefulWidget {
   final Caption caption;
   final String translation;
   final ValueNotifier<double> currentTimeNotifier;
@@ -72,6 +71,51 @@ class _CaptionContainer extends StatelessWidget {
     required this.currentTimeNotifier,
     required this.onWordTap,
   });
+
+  @override
+  State<_CaptionContainer> createState() => _CaptionContainerState();
+}
+
+class _CaptionContainerState extends State<_CaptionContainer> {
+  // This notifier only fires when the active word INDEX changes (e.g., 2 times/sec),
+  // not when the time changes (60 times/sec).
+  late final ValueNotifier<int> _activeWordIndexNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeWordIndexNotifier = ValueNotifier<int>(-1);
+
+    // Listen to the high-frequency timer manually
+    widget.currentTimeNotifier.addListener(_onTimeChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.currentTimeNotifier.removeListener(_onTimeChanged);
+    _activeWordIndexNotifier.dispose();
+    super.dispose();
+  }
+
+  void _onTimeChanged() {
+    final time = widget.currentTimeNotifier.value;
+    int newIndex = -1;
+
+    // Find which word is currently active
+    // This loop is purely logic (very fast), no UI rebuilding happens here.
+    for (int i = 0; i < widget.caption.words.length; i++) {
+      final w = widget.caption.words[i];
+      if (time >= w.start && time <= w.end) {
+        newIndex = i;
+        break;
+      }
+    }
+
+    // ONLY notify listeners if the word index effectively changed
+    if (newIndex != _activeWordIndexNotifier.value) {
+      _activeWordIndexNotifier.value = newIndex;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,19 +137,21 @@ class _CaptionContainer extends StatelessWidget {
               Wrap(
                 alignment: WrapAlignment.start,
                 spacing: 4,
-                children: caption.words.map((word) {
+                children: widget.caption.words.asMap().entries.map((entry) {
                   return _HighlightableWord(
-                    word: word,
-                    currentTimeNotifier: currentTimeNotifier,
-                    onTap: () => onWordTap(word.word),
+                    word: entry.value,
+                    index: entry.key,
+                    // Pass the low-frequency notifier
+                    activeWordIndexNotifier: _activeWordIndexNotifier,
+                    onTap: () => widget.onWordTap(entry.value.word),
                   );
                 }).toList(),
               ),
-              if (translation.isNotEmpty)
+              if (widget.translation.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    translation,
+                    widget.translation,
                     style: const TextStyle(
                       color: Colors.white30,
                       fontSize: 18,
@@ -123,12 +169,14 @@ class _CaptionContainer extends StatelessWidget {
 
 class _HighlightableWord extends StatelessWidget {
   final Word word;
-  final ValueNotifier<double> currentTimeNotifier;
+  final int index;
+  final ValueNotifier<int> activeWordIndexNotifier;
   final VoidCallback onTap;
 
   const _HighlightableWord({
     required this.word,
-    required this.currentTimeNotifier,
+    required this.index,
+    required this.activeWordIndexNotifier,
     required this.onTap,
   });
 
@@ -136,10 +184,12 @@ class _HighlightableWord extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: ValueListenableBuilder<double>(
-        valueListenable: currentTimeNotifier,
-        builder: (context, time, _) {
-          final isHighlighted = time >= word.start && time <= word.end;
+      child: ValueListenableBuilder<int>(
+        valueListenable: activeWordIndexNotifier,
+        builder: (context, activeIndex, _) {
+          // This builder now only runs ~2 times per second
+          // (only when the active word actually flips).
+          final isHighlighted = index == activeIndex;
 
           return Text(
             word.word,

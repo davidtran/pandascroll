@@ -20,6 +20,29 @@ class _WordAudioPlayerState extends State<WordAudioPlayer> {
   void initState() {
     super.initState();
     _player = AudioPlayer();
+    // Listen to player state to update UI
+    _player.playerStateStream.listen((state) {
+      if (!mounted) return;
+      final isPlaying = state.playing;
+      final processingState = state.processingState;
+      final actuallyPlaying =
+          isPlaying &&
+          processingState != ProcessingState.completed &&
+          processingState != ProcessingState.idle;
+
+      if (_isPlaying != actuallyPlaying) {
+        setState(() {
+          _isPlaying = actuallyPlaying;
+        });
+
+        // Auto-reset when finished
+        if (processingState == ProcessingState.completed) {
+          _player.stop(); // Reset playing state to false
+          _player.seek(Duration.zero);
+        }
+      }
+    });
+
     _initAudio();
   }
 
@@ -39,21 +62,11 @@ class _WordAudioPlayerState extends State<WordAudioPlayer> {
   Future<void> _play() async {
     if (_isPlaying || widget.url == null) return;
 
-    setState(() {
-      _isPlaying = true;
-    });
-
     try {
       await _player.seek(Duration.zero);
       await _player.play();
     } catch (e) {
       debugPrint("Error playing audio: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isPlaying = false;
-        });
-      }
     }
   }
 

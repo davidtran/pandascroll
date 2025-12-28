@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../flashcards/data/flashcards_repository.dart';
 import 'package:flutter/material.dart';
 import '../../../../../core/network/api_client.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -6,23 +8,26 @@ import '../../../../onboarding/presentation/widgets/panda_button.dart';
 import '../../../domain/models/word_preparation_model.dart';
 import 'word_audio_player.dart';
 
-class WordPreparationScreen extends StatefulWidget {
+class WordPreparationScreen extends ConsumerStatefulWidget {
   final WordPreparationModel data;
   final VoidCallback onComplete;
   final String videoId;
+  final String language;
 
   const WordPreparationScreen({
     super.key,
     required this.data,
     required this.onComplete,
     required this.videoId,
+    required this.language,
   });
 
   @override
-  State<WordPreparationScreen> createState() => _WordPreparationScreenState();
+  ConsumerState<WordPreparationScreen> createState() =>
+      _WordPreparationScreenState();
 }
 
-class _WordPreparationScreenState extends State<WordPreparationScreen> {
+class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
   late PageController _pageController;
   int _currentIndex = 0;
   late List<dynamic> _items; // Contains both Words and Sentences
@@ -226,19 +231,79 @@ class _WordPreparationScreenState extends State<WordPreparationScreen> {
                         ),
                       ),
                     ),
-                    if (audioUrl != null)
-                      WordAudioPlayer(url: audioUrl, autoPlay: autoPlay),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () async {
+                            try {
+                              await ref
+                                  .read(flashcardsRepositoryProvider)
+                                  .addFlashcard(
+                                    front: word.word,
+                                    back: [
+                                      word.pronunciation,
+                                      word.translation,
+                                      if (word.examples.isNotEmpty)
+                                        word.examples.first.text,
+                                    ],
+                                    videoId: widget.videoId,
+                                    language: widget.language,
+                                  );
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Added to Flashcards"),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                                // Configure automatic reload
+                                ref
+                                    .read(
+                                      flashcardsUpdateTriggerProvider.notifier,
+                                    )
+                                    .trigger();
+                                // Also refresh badge count
+                                ref.refresh(flashcardsDueCountProvider);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Error: $e"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.bookmark_add_outlined,
+                            color: AppColors.primaryBrand,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
 
                 const SizedBox(height: 8),
-                Text(
-                  word.word,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.pandaBlack,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      word.word,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.pandaBlack,
+                      ),
+                    ),
+                    if (audioUrl != null) ...[
+                      const SizedBox(width: 8),
+                      WordAudioPlayer(url: audioUrl, autoPlay: autoPlay),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

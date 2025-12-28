@@ -147,6 +147,7 @@ class QuizPanel extends ConsumerStatefulWidget {
   final Function(String title)? onTitleChanged;
   final VoidCallback onClose;
   final VoidCallback? onNextVideo;
+  final String language;
 
   const QuizPanel({
     super.key,
@@ -155,6 +156,7 @@ class QuizPanel extends ConsumerStatefulWidget {
     this.onTitleChanged,
     required this.onClose,
     this.onNextVideo,
+    required this.language,
   });
 
   @override
@@ -500,14 +502,15 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Quit Quiz?"),
+        backgroundColor: Colors.white,
+        title: const Text("quit?"),
         content: const Text(
-          "Are you sure you want to quit? You will lose progress.",
+          "are you sure you want to quit? you will lose progress.",
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("cancel", style: TextStyle(color: Colors.black)),
           ),
           TextButton(
             onPressed: () {
@@ -515,7 +518,7 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
               _resetState();
               widget.onClose();
             },
-            child: const Text("Quit", style: TextStyle(color: Colors.red)),
+            child: const Text("quit", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -718,6 +721,7 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
           });
         },
         videoId: widget.videoId,
+        language: widget.language,
       );
     }
 

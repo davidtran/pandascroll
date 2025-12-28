@@ -72,47 +72,36 @@ class ProfileSettings extends ConsumerWidget {
 
         const SizedBox(height: 16),
 
-        SizedBox(
+        Container(
           width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.red, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.5),
+                offset: const Offset(2, 2),
+              ),
+            ],
+          ),
           child: TextButton(
-            onPressed: () {}, // TODO: Implement Delete Data
+            onPressed: () {},
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               backgroundColor: Colors.red.shade50,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
             ),
             child: const Text(
               "Delete Data",
               style: TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 18,
               ),
             ),
           ),
         ),
 
-        const SizedBox(height: 16),
-
-        const Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cruelty_free, size: 14, color: Colors.grey),
-              SizedBox(width: 4),
-              Text(
-                "Made with Bamboo v1.0.2",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
         const SizedBox(height: 100),
       ],
     );

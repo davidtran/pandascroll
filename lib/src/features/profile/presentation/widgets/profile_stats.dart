@@ -116,19 +116,12 @@ class ProfileStats extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(height: 12),
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 21,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -138,7 +131,7 @@ class ProfileStats extends ConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: color.withOpacity(0.7),
+              color: Colors.grey,
               letterSpacing: 1.2,
             ),
           ),

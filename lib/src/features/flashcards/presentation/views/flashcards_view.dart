@@ -221,7 +221,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
       }
 
       return const Scaffold(
-        backgroundColor: pandaBlack,
+        backgroundColor: Colors.black,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -323,7 +323,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         // Actions Column (Right Side)
         Positioned(
           right: 16,
-          bottom: 100, // Adjusted to sit above button
+          bottom: 80, // Adjusted to sit above button
           child: PointerInterceptor(
             child: Column(
               children: [
@@ -414,7 +414,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         Positioned(
           left: 16,
           right: 80, // Space for actions
-          bottom: 100, // aligned with actions bottom
+          bottom: 80, // aligned with actions bottom
           child: PointerInterceptor(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +474,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         Positioned(
           left: 16,
           right: 16,
-          bottom: 24,
+          bottom: 10,
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: widget.hideContent ? 0.0 : 1.0,

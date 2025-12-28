@@ -66,36 +66,11 @@ class ProfileView extends StatelessWidget {
           // Main Content
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
                   // Navbar with Back Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildNavButton(
-                          icon: Icons.arrow_back,
-                          onTap: () => Navigator.pop(context),
-                        ),
-                        const Text(
-                          "My Profile",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.pandaBlack,
-                          ),
-                        ),
-                        _buildNavButton(
-                          icon: Icons.settings,
-                          onTap: () {}, // Scroll to settings?
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 40),
                   const ProfileHeader(),
                   const SizedBox(height: 32),
                   const ProfileStats(),

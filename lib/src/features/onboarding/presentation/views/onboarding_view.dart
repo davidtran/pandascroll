@@ -27,30 +27,30 @@ class _OnboardingViewState extends State<OnboardingView> {
 
   final List<Map<String, dynamic>> _slides = [
     {
-      "step": "Step 1: Watch",
+      "step": "step 1: watch",
       "icon": Icons.ondemand_video_rounded,
-      "titlePrefix": "Immersion through",
+      "titlePrefix": "immersion through",
       "joyText": "video!",
       "body":
-          "Scroll through millions of videos in the language you want to learn. It's fun and effective!",
+          "scroll through millions of videos in the language you want to learn. it's fun and effective!",
       "image": "assets/images/panda_login.png",
     },
     {
-      "step": "Step 2: Play",
+      "step": "step 2: play",
       "icon": Icons.videogame_asset_rounded,
-      "titlePrefix": "Don't just watch.",
-      "joyText": "Interaction!",
-      "body": "Do the exercises to lock it in. It's fun, fast and effective!",
+      "titlePrefix": "don't just watch.",
+      "joyText": "interaction!",
+      "body": "do the exercises to lock it in. it's fun, fast and effective!",
       "image": "assets/images/panda_thinking.png",
     },
     {
-      "step": "Step 3: LangRot",
+      "step": "step 3: langrot",
       "icon": Icons.psychology_rounded,
-      "titlePrefix": "Rot your brain with a",
+      "titlePrefix": "rot your brain with a",
       "imageWidth": 180,
       "joyText": "new language",
       "body":
-          "Dive into endless short videos and exercises until you achieve total fluency!",
+          "dive into endless short videos and exercises until you achieve total fluency!",
       "image": "assets/images/panda_learn.png",
     },
   ];
@@ -111,7 +111,6 @@ class _OnboardingViewState extends State<OnboardingView> {
           SafeArea(
             child: Column(
               children: [
-                // Header (Progress + Skip)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -153,24 +152,6 @@ class _OnboardingViewState extends State<OnboardingView> {
                       ),
 
                       // Skip Button
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NativeLanguageView(),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: pandaBorder,
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        child: const Text("SKIP"),
-                      ),
                     ],
                   ),
                 ),
@@ -308,8 +289,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                     children: [
                       PandaButton(
                         text: _currentPage == _slides.length - 1
-                            ? "Let's Start!"
-                            : "Next",
+                            ? "let's start!"
+                            : "next",
                         icon: Icons.pets,
                         backgroundColor: pandaGreen,
                         textColor: pandaDark,

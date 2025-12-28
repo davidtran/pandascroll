@@ -288,7 +288,7 @@ class _PreferencesViewState extends ConsumerState<PreferencesView> {
                       ScaffoldMessenger.of(context).clearSnackBars();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("You can only choose 3!"),
+                          content: Text("you can only choose 3!"),
                           duration: Duration(milliseconds: 1000),
                         ),
                       );

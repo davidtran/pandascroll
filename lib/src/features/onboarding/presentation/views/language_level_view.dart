@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/language_utils.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../providers/onboarding_provider.dart';
@@ -60,6 +61,9 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
     const Color primaryColor = AppColors.bambooGreen;
     const Color textMain = AppColors.textMain;
 
+    final targetLanguage = ref.watch(onboardingProvider).targetLanguage;
+    final languageName = LanguageUtils.getLanguageName(targetLanguage).toLowerCase();
+
     return Scaffold(
       backgroundColor: AppColors.creamBg,
       body: SafeArea(
@@ -111,8 +115,8 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                       // Title
                       RichText(
                         textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(
+                        text: TextSpan(
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
                             color: textMain,
@@ -120,17 +124,17 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                             height: 1.2,
                           ),
                           children: [
-                            TextSpan(text: "How's your "),
+                            const TextSpan(text: "how's your "),
                             TextSpan(
-                              text: "Chinese",
-                              style: TextStyle(
+                              text: languageName,
+                              style: const TextStyle(
                                 color: AppColors.bambooDark,
                                 decoration: TextDecoration.underline,
                                 decorationStyle: TextDecorationStyle.wavy,
                                 decorationColor: Color(0xFFFFD336),
                               ),
                             ),
-                            TextSpan(text: "?"),
+                            const TextSpan(text: "?"),
                           ],
                         ),
                       ),
@@ -156,32 +160,7 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                         );
                       }),
 
-                      const SizedBox(height: 16),
-                      Center(
-                        child: TextButton(
-                          onPressed: () {},
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Quicksand',
-                              ),
-                              children: [
-                                const TextSpan(text: "Not sure? "),
-                                TextSpan(
-                                  text: "Take a quick test",
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      
                   ),
                 ),
               ],
@@ -207,7 +186,7 @@ class _LanguageLevelViewState extends ConsumerState<LanguageLevelView> {
                   ),
                 ),
                 child: SafeArea(
-                  child: PandaButton(text: "CONTINUE", onPressed: _onContinue),
+                  child: PandaButton(text: "continue", onPressed: _onContinue),
                 ),
               ),
             ),

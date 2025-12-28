@@ -8,12 +8,14 @@ class LanguageSelectorWidget extends StatefulWidget {
   final List<LanguageOption> languages;
   final String? selectedLanguageCode;
   final ValueChanged<String> onSelected;
+  final bool showSearch;
 
   const LanguageSelectorWidget({
     super.key,
     required this.languages,
     required this.selectedLanguageCode,
     required this.onSelected,
+    this.showSearch = true,
   });
 
   @override
@@ -73,21 +75,23 @@ class _LanguageSelectorWidgetState extends State<LanguageSelectorWidget> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Search Bar
-        TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: "Search languages...",
-            prefixIcon: const Icon(Icons.search, color: Colors.grey),
-            filled: true,
-            fillColor: Colors.grey[100],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+        if (widget.showSearch) ...[
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: "search languages...",
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.grey[100],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
+        ],
 
         // List
         ListView.builder(

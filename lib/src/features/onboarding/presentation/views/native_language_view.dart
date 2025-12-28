@@ -52,7 +52,7 @@ class NativeLanguageView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "Which language?",
+                        "which language?",
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w700,
@@ -62,7 +62,7 @@ class NativeLanguageView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "Select your native language so langrot can help you!",
+                        "select your native language so langrot can help you!",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textLight,
@@ -82,8 +82,9 @@ class NativeLanguageView extends ConsumerWidget {
                     child: Column(
                       children: [
                         // Suggested
-                        _buildSectionHeader("Suggested", Icons.star_rounded),
+                        _buildSectionHeader("suggested", Icons.star_rounded),
                         LanguageSelectorWidget(
+                          showSearch: false,
                           languages: LanguageConstants.nativeLanguages
                               .where((l) => ['en', 'es'].contains(l.code))
                               .toList(),
@@ -97,10 +98,11 @@ class NativeLanguageView extends ConsumerWidget {
                         const SizedBox(height: 24),
                         // All Languages
                         _buildSectionHeader(
-                          "All Languages",
+                          "all Languages",
                           Icons.public_rounded,
                         ),
                         LanguageSelectorWidget(
+                          showSearch: true,
                           languages: LanguageConstants.nativeLanguages
                               .where((l) => !['en', 'es'].contains(l.code))
                               .toList(),
@@ -139,7 +141,7 @@ class NativeLanguageView extends ConsumerWidget {
                 ),
                 child: SafeArea(
                   child: PandaButton(
-                    text: "Continue",
+                    text: "continue",
                     onPressed: () => _onContinue(context, ref),
                     icon: Icons.arrow_forward_rounded,
                   ),

@@ -112,7 +112,7 @@ class _TargetLanguageViewState extends ConsumerState<TargetLanguageView> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "Choose the language you want to master.",
+                        "choose the language you want to master.",
                         style: TextStyle(
                           color: AppColors.textLight,
                           fontWeight: FontWeight.w500,
@@ -164,7 +164,7 @@ class _TargetLanguageViewState extends ConsumerState<TargetLanguageView> {
                 ),
                 child: SafeArea(
                   child: PandaButton(
-                    text: "Start Adventure",
+                    text: "start adventure",
                     onPressed: _onStartAdventure,
                     icon: Icons.rocket_launch_rounded,
                   ),

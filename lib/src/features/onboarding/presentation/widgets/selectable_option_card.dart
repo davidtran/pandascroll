@@ -101,12 +101,12 @@ class _SelectableOptionCardState extends State<SelectableOptionCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.title,
+                    widget.title.toLowerCase(),
                     style: AppTheme.lightTheme.textTheme.titleLarge,
                   ),
                   if (widget.subtitle != null)
                     Text(
-                      widget.subtitle!,
+                      widget.subtitle!.toLowerCase(),
                       style: AppTheme.lightTheme.textTheme.bodyLarge,
                     ),
                 ],

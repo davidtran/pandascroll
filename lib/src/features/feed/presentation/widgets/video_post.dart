@@ -254,23 +254,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       children: [
         _buildPlayer(effectiveIsPlaying),
 
-        // Thumbnail Overlay (Only for YouTube for now as requested)
-        if (isYouTube && videoId.isNotEmpty)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedOpacity(
-                opacity: _isVideoLoaded ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 500),
-                child: Image.network(
-                  "https://img.youtube.com/vi/$videoId/maxresdefault.jpg",
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox(), // Hide if fails
-                ),
-              ),
-            ),
-          ),
-
         // Removed: if (!_isInitialized) ... Loading indicator
         // We can add it back if the Players report "isLoaded" state,
         // but for now let's rely on the player's native loading or add a callback later.
@@ -417,7 +400,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           bottom: 80, // aligned with actions bottom
           child: PointerInterceptor(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Captions Overlay
@@ -605,9 +588,12 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         isPlaying: isPlaying,
         onCurrentTime: (time) {
           // Sync timer
-          // Only update if difference is significant to avoid jitter from async JS updates?
-          // Actually, just updating value is fine, it corrects drift.
           _currentTimeNotifier.value = time;
+          if (!_isVideoLoaded && time > 0 && mounted) {
+            setState(() {
+              _isVideoLoaded = true;
+            });
+          }
         },
         onStateChange: _onPlayerStateChange,
         onEnded: _onPlayerEnded,

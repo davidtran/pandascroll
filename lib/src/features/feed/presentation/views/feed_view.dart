@@ -190,7 +190,7 @@ class _VideoPageFeed extends ConsumerWidget {
       scrollDirection: Axis.vertical,
       itemCount: videos.length,
       // Use allowImplicitScrolling to keep previous/next video ready in memory
-      allowImplicitScrolling: true,
+      allowImplicitScrolling: false,
       onPageChanged: (index) {
         ref.read(videoFeedProvider.notifier).onPageChanged(index);
       },

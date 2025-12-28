@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../data/flashcards_repository.dart';
@@ -26,6 +27,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
   List<FlashcardModel> _reviewQueue = [];
   int _totalCards = 0;
   bool _isLoading = true;
+  bool _isEnded = false;
   // Track flipped state per card index
   final Set<int> _flippedIndices = {};
   int _currentIndex = 0;
@@ -41,6 +43,13 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
   void dispose() {
     _swiperController.dispose();
     super.dispose();
+  }
+
+  void onReset() {
+    setState(() {
+      _isEnded = false;
+    });
+    _loadCards();
   }
 
   Future<void> _loadCards() async {
@@ -236,15 +245,19 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                 "All caught up!",
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 28,
+                  fontSize: 31,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Nunito',
+                  fontFamily: 'Fredoka',
                 ),
               ),
               SizedBox(height: 8),
               Text(
-                "Great job! Come back later.",
-                style: TextStyle(color: Colors.white54, fontSize: 16),
+                "The words in this stack will reappear later.",
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 21,
+                  fontFamily: 'Nunito',
+                ),
               ),
             ],
           ),
@@ -307,7 +320,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                     child: Column(
                       children: [
                         Text(
-                          "REVIEWING",
+                          "reviewing",
                           style: const TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 10,
@@ -318,7 +331,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Tap to Flip • Buttons to Rate",
+                          "tap to flip",
                           style: const TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 14,
@@ -331,77 +344,120 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                   ),
                 ),
 
-                Expanded(
-                  child: CardSwiper(
-                    controller: _swiperController,
-                    cardsCount: _reviewQueue.length,
-
-                    numberOfCardsDisplayed: min(3, _reviewQueue.length),
-                    padding: const EdgeInsets.all(24.0),
-
-                    cardBuilder:
-                        (context, index, percentThresholdX, percentThresholdY) {
-                          final card = _reviewQueue[index];
-                          final isCardFlipped = _flippedIndices.contains(index);
-
-                          return GestureDetector(
-                            onTap: () => _flipCard(index),
-                            key: ValueKey(card.id),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 400),
-                              transitionBuilder: (child, animation) {
-                                final rotateAnim = Tween(
-                                  begin: pi,
-                                  end: 0.0,
-                                ).animate(animation);
-                                return AnimatedBuilder(
-                                  animation: rotateAnim,
-                                  builder: (context, child) {
-                                    return Transform(
-                                      transform: Matrix4.identity()
-                                        ..setEntry(3, 2, 0.001)
-                                        ..rotateY(
-                                          (1 - animation.value) *
-                                              pi /
-                                              (child!.key ==
-                                                      const ValueKey(true)
-                                                  ? 1
-                                                  : -1) *
-                                              0,
-                                        ),
-                                      alignment: Alignment.center,
-                                      child: FadeTransition(
-                                        opacity: animation,
-                                        child: ScaleTransition(
-                                          scale: animation,
-                                          child: child,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: child,
-                                );
-                              },
-                              child: isCardFlipped
-                                  ? _buildBackCard(
-                                      card,
-                                      pandaWhite,
-                                      pandaBlack,
-                                      primaryGreen,
-                                      softGreen,
-                                    )
-                                  : _buildFrontCard(
-                                      card,
-                                      pandaWhite,
-                                      pandaBlack,
-                                      primaryGreen,
-                                      softGreen,
-                                    ),
+                if (_isEnded) ...[
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "you finished this stack.",
+                            style: const TextStyle(
+                              fontFamily: 'Fredoka',
+                              fontSize: 31,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 16),
+                          PandaButton(
+                            text: 'start again',
+                            onPressed: onReset,
+                            backgroundColor: pandaWhite,
+                            shadowColor: pandaWhite.withOpacity(0.2),
+                            width: 200,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
+                if (!_isEnded) ...[
+                  Expanded(
+                    child: CardSwiper(
+                      controller: _swiperController,
+                      cardsCount: _reviewQueue.length,
+                      isLoop: false,
+                      onEnd: () => {
+                        setState(() {
+                          _isEnded = true;
+                        }),
+                      },
+
+                      numberOfCardsDisplayed: min(3, _reviewQueue.length),
+                      padding: const EdgeInsets.all(24.0),
+
+                      cardBuilder:
+                          (
+                            context,
+                            index,
+                            percentThresholdX,
+                            percentThresholdY,
+                          ) {
+                            final card = _reviewQueue[index];
+                            final isCardFlipped = _flippedIndices.contains(
+                              index,
+                            );
+
+                            return GestureDetector(
+                              onTap: () => _flipCard(index),
+                              key: ValueKey(card.id),
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 400),
+                                transitionBuilder: (child, animation) {
+                                  final rotateAnim = Tween(
+                                    begin: pi,
+                                    end: 0.0,
+                                  ).animate(animation);
+                                  return AnimatedBuilder(
+                                    animation: rotateAnim,
+                                    builder: (context, child) {
+                                      return Transform(
+                                        transform: Matrix4.identity()
+                                          ..setEntry(3, 2, 0.001)
+                                          ..rotateY(
+                                            (1 - animation.value) *
+                                                pi /
+                                                (child!.key ==
+                                                        const ValueKey(true)
+                                                    ? 1
+                                                    : -1) *
+                                                0,
+                                          ),
+                                        alignment: Alignment.center,
+                                        child: FadeTransition(
+                                          opacity: animation,
+                                          child: ScaleTransition(
+                                            scale: animation,
+                                            child: child,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: child,
+                                  );
+                                },
+                                child: isCardFlipped
+                                    ? _buildBackCard(
+                                        card,
+                                        pandaWhite,
+                                        pandaBlack,
+                                        primaryGreen,
+                                        softGreen,
+                                      )
+                                    : _buildFrontCard(
+                                        card,
+                                        pandaWhite,
+                                        pandaBlack,
+                                        primaryGreen,
+                                        softGreen,
+                                      ),
+                              ),
+                            );
+                          },
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 32),
                 // Footer Controls (Ratings trigger Swipes)
                 Padding(
@@ -411,7 +467,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                     children: [
                       // Hard (Left)
                       _buildRatingFab(
-                        "Hard",
+                        "hard",
                         FaIcon(
                           FontAwesomeIcons.faceFrown,
                           color: Colors.black,
@@ -422,7 +478,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                       ),
                       // Good (Right)
                       _buildRatingFab(
-                        "Good",
+                        "good",
                         FaIcon(
                           FontAwesomeIcons.faceMeh,
                           color: Colors.black,
@@ -433,7 +489,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                       ),
                       // Easy (Top)
                       _buildRatingFab(
-                        "Easy",
+                        "easy",
                         FaIcon(
                           FontAwesomeIcons.faceGrinBeam,
                           color: Colors.black,

@@ -1,4 +1,5 @@
 class DictionaryModel {
+  final String id;
   final String word;
   final String type;
   final String pronunciation;
@@ -7,6 +8,7 @@ class DictionaryModel {
   final List<Example> examples;
 
   DictionaryModel({
+    required this.id,
     required this.word,
     required this.type,
     required this.pronunciation,
@@ -17,6 +19,7 @@ class DictionaryModel {
 
   factory DictionaryModel.fromJson(Map<String, dynamic> json) {
     return DictionaryModel(
+      id: json['id'].toString(),
       word: json['word'] as String,
       type: json['type'] as String,
       pronunciation: json['pronunciation'] as String,
@@ -32,19 +35,15 @@ class DictionaryModel {
 class Example {
   final String text;
   final String translation;
-  final String pronunciation;
+  final String? pronunciation;
 
-  Example({
-    required this.text,
-    required this.translation,
-    required this.pronunciation,
-  });
+  Example({required this.text, required this.translation, this.pronunciation});
 
   factory Example.fromJson(Map<String, dynamic> json) {
     return Example(
       text: json['text'] as String,
       translation: json['translation'] as String,
-      pronunciation: json['pronunciation'] as String,
+      pronunciation: json['pronunciation'] as String?,
     );
   }
 }

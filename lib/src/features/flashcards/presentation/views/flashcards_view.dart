@@ -6,6 +6,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
+import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_player.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../data/flashcards_repository.dart';
@@ -576,12 +577,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
             alignment: Alignment.topRight,
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: soft, shape: BoxShape.circle),
-                child: const Icon(Icons.volume_up, color: Color(0xFF13ec80)),
-              ),
+              child: TtsPlayer(id: card.id, type: 'flashcard', autoPlay: true),
             ),
           ),
           Center(

@@ -3,15 +3,18 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/dictionary_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../flashcards/data/flashcards_repository.dart';
+import 'quiz/tts_player.dart';
 
 class DictionaryPanel extends ConsumerWidget {
   final DictionaryModel data;
+  final String dictionaryId;
   final VoidCallback onClose; // Added callback
   final String? videoId; // Passed from parent
   final String language; // Passed from parent
 
   const DictionaryPanel({
     super.key,
+    required this.dictionaryId,
     required this.data,
     required this.onClose,
     this.videoId,
@@ -20,6 +23,7 @@ class DictionaryPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    print('aaaa');
     // const Color pandaBlack = AppColors.textMain; // Already defined
 
     return SingleChildScrollView(
@@ -49,22 +53,10 @@ class DictionaryPanel extends ConsumerWidget {
                       ),
                       const SizedBox(width: 12),
                       // Audio Button
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: const BoxDecoration(
-                          color: AppColors.textMain,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.volume_up_rounded),
-                          color: Colors.white,
-                          iconSize: 14,
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            // Play audio logic
-                          },
-                        ),
+                      TtsPlayer(
+                        id: dictionaryId,
+                        type: 'dictionary',
+                        autoPlay: true,
                       ),
                     ],
                   ),

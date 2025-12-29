@@ -100,7 +100,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     _progressTimer = null;
   }
 
-  void _handleWordTap(String word) async {
+  void _handleWordTap(String word, String sentence) async {
     setState(() {
       _isPaused = true;
     });
@@ -113,10 +113,20 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         ),
       );
 
-      final data = await ApiClient.post('/dictionary', body: {'word': word});
-      final dictionaryData = DictionaryModel.fromJson(data['data'][0]);
+      final data = await ApiClient.post(
+        '/dictionary',
+        body: {
+          'word': word,
+          "language": widget.video.language,
+          "sentence": sentence,
+        },
+      );
+      final dictionaryData = DictionaryModel.fromJson(data['data']);
+      print(data);
+      final dictionaryId = data['data']['id'];
 
       if (mounted) {
+        print(dictionaryData.pronunciation);
         widget.onShowPanel(
           "Dictionary 📖",
           DictionaryPanel(
@@ -126,6 +136,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
             },
             videoId: widget.video.id,
             language: widget.video.language,
+            dictionaryId: dictionaryId.toString(),
           ),
         );
       }

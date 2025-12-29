@@ -3,6 +3,14 @@ import '../../features/onboarding/domain/models/language_option.dart';
 class LanguageConstants {
   static const List<LanguageOption> targetLanguages = [
     LanguageOption(
+      name: 'English',
+      subtitle: 'Hello',
+      flagUrl:
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuB3o9h13vMUw0UlVF3KGfZ_GibGHgDzzI4cUYybLts9J2ZrM8v006e9A91nnplDP4TBmu3C3cqbGG_SVG9wtG1UOXqklHUUFdWGvvQ0dcqlXLHrdLIytG6I2HE4zRadCKpOYm_vnjXgc4DIa5eRfJvlC9HbTicodMY7fVXJ93LD2S2H-biRrfFoG5-Au1SxC-BoYcLpdhL81FI45PfguWBJA8onzM3ePPF-JKLk9BMiJuOzaOAdzZmf0sxNzHvyGJ3dQYggEf4GRpk',
+      code: 'en',
+      available: true,
+    ),
+    LanguageOption(
       name: 'Chinese',
       subtitle: '你好',
       flagUrl:
@@ -10,14 +18,7 @@ class LanguageConstants {
       code: 'zh',
       available: true,
     ),
-    LanguageOption(
-      name: 'English',
-      subtitle: 'Hello',
-      flagUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuB3o9h13vMUw0UlVF3KGfZ_GibGHgDzzI4cUYybLts9J2ZrM8v006e9A91nnplDP4TBmu3C3cqbGG_SVG9wtG1UOXqklHUUFdWGvvQ0dcqlXLHrdLIytG6I2HE4zRadCKpOYm_vnjXgc4DIa5eRfJvlC9HbTicodMY7fVXJ93LD2S2H-biRrfFoG5-Au1SxC-BoYcLpdhL81FI45PfguWBJA8onzM3ePPF-JKLk9BMiJuOzaOAdzZmf0sxNzHvyGJ3dQYggEf4GRpk',
-      code: 'en',
-      available: false,
-    ),
+
     LanguageOption(
       name: 'Japanese',
       subtitle: 'こんにちは',

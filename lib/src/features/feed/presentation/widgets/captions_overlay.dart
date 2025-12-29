@@ -7,7 +7,7 @@ class CaptionsOverlay extends StatefulWidget {
   final ValueNotifier<double> currentTimeNotifier;
   final List<Caption> captions;
   final List<String> translations;
-  final Function(String) onWordTap;
+  final Function(String, String) onWordTap;
 
   const CaptionsOverlay({
     super.key,
@@ -80,7 +80,7 @@ class _CaptionsOverlayState extends State<CaptionsOverlay> {
       caption: currentCaption,
       translation: currentTranslation,
       currentTimeNotifier: widget.currentTimeNotifier,
-      onWordTap: widget.onWordTap,
+      onWordTap: (word) => widget.onWordTap(word, currentCaption.text),
     );
   }
 }
@@ -156,7 +156,7 @@ class _CaptionContainerState extends State<_CaptionContainer> {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 5),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: ShapeDecoration(color: Colors.black54, shape: shape),
+          color: Colors.black54,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

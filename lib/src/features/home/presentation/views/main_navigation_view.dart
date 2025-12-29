@@ -35,6 +35,7 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
     final contentColor = isProfile ? Colors.black : Colors.white;
     final unselectedColor = isProfile ? Colors.grey[400] : Colors.grey[600];
     final borderColor = isProfile ? Colors.black12 : Colors.white12;
+    final hasVirtualHomeButton = MediaQuery.of(context).padding.bottom > 0;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -53,7 +54,10 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
             context: context,
             removeBottom: true,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 15.0, top: 5),
+              padding: EdgeInsets.only(
+                bottom: hasVirtualHomeButton ? 15 : 0,
+                top: 5,
+              ),
               child: BottomNavigationBar(
                 currentIndex: _currentIndex,
                 onTap: _onItemTapped,

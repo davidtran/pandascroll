@@ -123,7 +123,8 @@ class LanguageLevelWidget extends ConsumerWidget {
                     fontFamily: 'Fredoka',
                   ),
                 ),
-                CountdownText(minutes: pawState.regenMinutes),
+                if (pawState.count < 5)
+                  CountdownText(minutes: pawState.regenMinutes),
               ],
             ),
         ],

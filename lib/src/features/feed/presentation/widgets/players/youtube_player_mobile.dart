@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -26,12 +27,13 @@ class YouTubePlayerMobile extends StatefulWidget {
 class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
   late YoutubePlayerController _controller;
   bool _isPlayerReady = false;
+  StreamSubscription? _seekSubscription;
 
   @override
   void initState() {
     super.initState();
     _initializeController();
-    widget.seekStream?.listen((seconds) {
+    _seekSubscription = widget.seekStream?.listen((seconds) {
       if (_isPlayerReady && mounted) {
         final currentPos = _controller.value.position;
         final newPos = currentPos + Duration(seconds: seconds);
@@ -101,6 +103,7 @@ class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
 
   @override
   void dispose() {
+    _seekSubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }

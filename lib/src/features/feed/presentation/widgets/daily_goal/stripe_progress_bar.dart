@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:pandascroll/src/core/theme/app_colors.dart';
 
 class StripeProgressBar extends StatefulWidget {
   final double progress;
+  // Make these customizable or constants
+  final Color color;
+  final Color stripeColor;
 
-  const StripeProgressBar({required this.progress});
+  const StripeProgressBar({
+    super.key,
+    required this.progress,
+    this.color = Colors.blue, // Replace with AppColors.primaryBrand
+    this.stripeColor = const Color(0x4DFFFFFF), // White with 0.3 opacity
+  });
 
   @override
   State<StripeProgressBar> createState() => _StripeProgressBarState();
@@ -31,91 +38,97 @@ class _StripeProgressBarState extends State<StripeProgressBar>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 1. Progress Fill
-        return Container(
-          height: 12, // Match height
-
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10), // Match previous
-            color: Colors.grey[200],
-            border: Border.all(color: Colors.black, width: 1),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Stack(
-              children: [
-                FractionallySizedBox(
-                  widthFactor: widget.progress,
-                  child: Container(color: AppColors.primaryBrand),
-                ),
-
-                // 2. Animated Stripes
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _stripeController,
-                    builder: (context, child) {
-                      return ClipRect(
-                        child: FractionallySizedBox(
-                          widthFactor: widget.progress,
-                          child: CustomPaint(
-                            painter: _FixedStripePainter(
-                              offset: _stripeController.value * 20.0,
-                              stripeWidth: 8.0,
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+    // 1. Static Container Setup
+    return Container(
+      height: 12,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.grey[200],
+        border: Border.all(color: Colors.black, width: 1),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Stack(
+          children: [
+            // 2. Solid Fill
+            FractionallySizedBox(
+              widthFactor: widget.progress,
+              child: Container(color: widget.color),
             ),
-          ),
-        );
-      },
+
+            // 3. Animated Stripes (Optimized)
+            // Note: No AnimatedBuilder here. The repaint listener is inside the painter.
+            FractionallySizedBox(
+              widthFactor: widget.progress,
+              child: ClipRect(
+                child: CustomPaint(
+                  painter: _OptimizedStripePainter(
+                    animation: _stripeController,
+                    stripeWidth: 8.0,
+                    color: widget.stripeColor,
+                  ),
+                  size: Size.infinite,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _FixedStripePainter extends CustomPainter {
-  final double offset;
+class _OptimizedStripePainter extends CustomPainter {
+  final Animation<double> animation;
   final double stripeWidth;
   final Color color;
 
-  _FixedStripePainter({
-    required this.offset,
+  // Cache the paint object to avoid allocation per frame
+  final Paint _paint;
+
+  _OptimizedStripePainter({
+    required this.animation,
     required this.stripeWidth,
     required this.color,
-  });
+  }) : _paint = Paint()..color = color,
+       super(repaint: animation); // Triggers paint() when animation ticks
+
+  // Cache the path so we don't recalculate geometry every frame
+  Path? _cachedPath;
+  Size? _cachedSize;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    // period
+    // 1. Generate path only if size changes
+    if (_cachedPath == null || size != _cachedSize) {
+      _cachedSize = size;
+      _cachedPath = _createStripePath(size);
+    }
+
+    final period = stripeWidth * 2;
+
+    // 2. Calculate shift based on animation value (0.0 to 1.0)
+    // We shift *right* by one period length over the course of 1 second
+    final double shift = animation.value * period;
+
+    // 3. Draw
+    canvas.save();
+    canvas.translate(shift, 0); // Cheap GPU operation
+    canvas.drawPath(_cachedPath!, _paint);
+    canvas.restore();
+  }
+
+  Path _createStripePath(Size size) {
+    final path = Path();
     final double period = stripeWidth * 2;
 
-    final path = Path();
+    // We draw extra stripes on the left (-period) so that when we
+    // translate the canvas to the right, we don't see a gap.
+    final int count = (size.width / stripeWidth).ceil() * 2 + 2;
 
-    // Coverage
-    // We want stripes ///
-    // from left to right.
-
-    int count = (size.width / stripeWidth).ceil() * 2 + 5;
-
-    for (int i = -5; i < count; i++) {
-      double startX =
-          i * period +
-          (offset % period) -
-          period; // Shift left by period to cover entrance?
-
-      // Draw parallelogram leaning ///
-      // Bottom-left: (startX, h)
-      // Bottom-right: (startX + w, h)
-      // Top-right: (startX + w + h, 0) -> lean right involves adding h to x at top
-      // Top-left: (startX + h, 0)
+    for (int i = -2; i < count; i++) {
+      // Logic for drawing the parallelogram
+      double startX = i * period;
 
       path.moveTo(startX, size.height);
       path.lineTo(startX + stripeWidth, size.height);
@@ -123,14 +136,11 @@ class _FixedStripePainter extends CustomPainter {
       path.lineTo(startX + size.height, 0);
       path.close();
     }
-
-    canvas.drawPath(path, paint);
+    return path;
   }
 
   @override
-  bool shouldRepaint(covariant _FixedStripePainter oldDelegate) {
-    return oldDelegate.offset != offset ||
-        oldDelegate.stripeWidth != stripeWidth ||
-        oldDelegate.color != color;
+  bool shouldRepaint(covariant _OptimizedStripePainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.stripeWidth != stripeWidth;
   }
 }

@@ -93,9 +93,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
 
   void _startTimer() {
     _stopTimer();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
-      _currentTimeNotifier.value += 0.016;
-    });
   }
 
   void _stopTimer() {

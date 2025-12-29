@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/video_model.dart';
 
-class CaptionsOverlay extends StatelessWidget {
+class CaptionsOverlay extends StatefulWidget {
   final ValueNotifier<double> currentTimeNotifier;
   final List<Caption> captions;
   final List<String> translations;
@@ -18,34 +18,42 @@ class CaptionsOverlay extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // We only want to rebuild the main container when the CAPTION index changes,
-    // not every time the time updates.
-    return ValueListenableBuilder<double>(
-      valueListenable: currentTimeNotifier,
-      builder: (context, currentTime, child) {
-        final activeIndex = _findActiveCaptionIndex(currentTime);
-        if (activeIndex == null) return const SizedBox.shrink();
+  State<CaptionsOverlay> createState() => _CaptionsOverlayState();
+}
 
-        final currentCaption = captions[activeIndex];
-        final currentTranslation = (activeIndex < translations.length)
-            ? translations[activeIndex]
-            : '';
+class _CaptionsOverlayState extends State<CaptionsOverlay> {
+  int? _activeIndex;
 
-        return _CaptionContainer(
-          key: ValueKey(activeIndex), // Ensure state resets for new captions
-          caption: currentCaption,
-          translation: currentTranslation,
-          currentTimeNotifier: currentTimeNotifier,
-          onWordTap: onWordTap,
-        );
-      },
-    );
+  @override
+  void initState() {
+    super.initState();
+    widget.currentTimeNotifier.addListener(_onTimeChanged);
+    // Initial check
+    _onTimeChanged();
+  }
+
+  @override
+  void dispose() {
+    widget.currentTimeNotifier.removeListener(_onTimeChanged);
+    super.dispose();
+  }
+
+  void _onTimeChanged() {
+    if (!mounted) return;
+
+    final currentTime = widget.currentTimeNotifier.value;
+    final newIndex = _findActiveCaptionIndex(currentTime);
+
+    if (newIndex != _activeIndex) {
+      setState(() {
+        _activeIndex = newIndex;
+      });
+    }
   }
 
   int? _findActiveCaptionIndex(double currentTime) {
-    for (int i = 0; i < captions.length; i++) {
-      final caption = captions[i];
+    for (int i = 0; i < widget.captions.length; i++) {
+      final caption = widget.captions[i];
       if (caption.words.isEmpty) continue;
 
       // Use the caption's full range
@@ -55,6 +63,25 @@ class CaptionsOverlay extends StatelessWidget {
       }
     }
     return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_activeIndex == null) return const SizedBox.shrink();
+
+    final activeIndex = _activeIndex!;
+    final currentCaption = widget.captions[activeIndex];
+    final currentTranslation = (activeIndex < widget.translations.length)
+        ? widget.translations[activeIndex]
+        : '';
+
+    return _CaptionContainer(
+      key: ValueKey(activeIndex), // Ensure state resets for new captions
+      caption: currentCaption,
+      translation: currentTranslation,
+      currentTimeNotifier: widget.currentTimeNotifier,
+      onWordTap: widget.onWordTap,
+    );
   }
 }
 

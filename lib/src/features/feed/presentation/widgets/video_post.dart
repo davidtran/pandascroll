@@ -23,6 +23,7 @@ import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'players/youtube_player.dart';
 import '../providers/stats_provider.dart';
+import '../../data/video_status_repository.dart';
 
 class VideoPost extends ConsumerStatefulWidget {
   final VideoModel video;
@@ -240,6 +241,27 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     // Loop logic is often handled by the player (TikTok/YouTube loop params),
     // but if we need to manually restart:
     _startTimer();
+  }
+
+  void _onPlayerError(String error) {
+    // 1. Log to Supabase
+    ref
+        .read(videoStatusRepositoryProvider)
+        .logVideoError(widget.video.id, error);
+
+    // 2. Show Alert
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Video unavailable. Skipping..."),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    // 3. Skip to next video
+    widget.onSkip?.call();
   }
 
   @override
@@ -611,6 +633,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         onCurrentTime: _handleCurrentTime,
         onStateChange: _onPlayerStateChange,
         onEnded: _onPlayerEnded,
+        onError: _onPlayerError,
         seekStream: _seekController.stream,
       );
     }

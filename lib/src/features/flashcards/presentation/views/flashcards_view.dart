@@ -11,6 +11,7 @@ import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_play
 import '../../../../core/theme/app_colors.dart';
 import '../../data/flashcards_repository.dart';
 import '../../domain/models/flashcard_model.dart';
+import 'package:pandascroll/src/features/profile/presentation/providers/profile_providers.dart';
 // Removed google_fonts import
 
 enum CardRating { hard, good, easy }
@@ -56,9 +57,12 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
   Future<void> _loadCards() async {
     // For now, reloading calls repository directly or we can use ref.read
     final repository = ref.read(flashcardsRepositoryProvider);
+    final profile = ref.read(userProfileProvider).value;
+    final language = profile?['target_language'] ?? '';
+
     final results = await Future.wait([
-      repository.getDueFlashcards(),
-      repository.getTotalFlashcardsCount(),
+      repository.getDueFlashcards(language),
+      repository.getTotalFlashcardsCount(language),
     ]);
 
     if (mounted) {
@@ -188,6 +192,16 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
     // Listen for external updates (e.g. adding a new card)
     ref.listen(flashcardsUpdateTriggerProvider, (_, __) {
       _loadCards();
+    });
+
+    // Reload when target language changes
+    ref.listen(userProfileProvider.select((v) => v.value?['target_language']), (
+      previous,
+      next,
+    ) {
+      if (previous != next) {
+        _loadCards();
+      }
     });
 
     if (_isLoading) {

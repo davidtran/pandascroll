@@ -22,21 +22,21 @@ class ProfileSettings extends ConsumerWidget {
         _buildSettingsContainer([
           _buildSettingsItem(
             icon: FontAwesomeIcons.discord,
-            title: "Support",
+            title: "support",
             color: const Color(0xFF5865F2), // Discord Blurple
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
           const Divider(height: 4, thickness: 2, color: Colors.black),
           _buildSettingsItem(
             icon: Icons.description_rounded,
-            title: "Terms",
+            title: "terms",
             color: Colors.grey,
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
           const Divider(height: 4, thickness: 2, color: Colors.black),
           _buildSettingsItem(
             icon: Icons.privacy_tip_rounded,
-            title: "Privacy Policy",
+            title: "privacy",
             color: Colors.grey,
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
@@ -60,7 +60,7 @@ class ProfileSettings extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 20),
             ),
             child: const Text(
-              "Log Out",
+              "logout",
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -92,7 +92,7 @@ class ProfileSettings extends ConsumerWidget {
               backgroundColor: Colors.red.shade50,
             ),
             child: const Text(
-              "Delete Data",
+              "clear data",
               style: TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,

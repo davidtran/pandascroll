@@ -32,7 +32,7 @@ class WeeklyActivityChart extends ConsumerWidget {
         // Current Day (1=Mon, 7=Sun)
         final currentWeekday = DateTime.now().weekday;
 
-        final days = ["M", "T", "W", "T", "F", "S", "S"];
+        final days = ["m", "t", "w", "t", "f", "s", "s"];
 
         return Container(
           padding: const EdgeInsets.all(24),
@@ -55,7 +55,7 @@ class WeeklyActivityChart extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "Weekly Activity",
+                    "weekly activity",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,

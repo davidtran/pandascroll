@@ -13,6 +13,7 @@ class YouTubePlayer extends StatelessWidget {
   final Function(double) onCurrentTime;
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
+  final Function(String error)? onError;
 
   const YouTubePlayer({
     super.key,
@@ -21,6 +22,7 @@ class YouTubePlayer extends StatelessWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.onError,
     this.seekStream,
   });
 
@@ -35,6 +37,7 @@ class YouTubePlayer extends StatelessWidget {
         onCurrentTime: onCurrentTime,
         onStateChange: onStateChange,
         onEnded: onEnded,
+        onError: onError,
         seekStream: seekStream,
       );
     } else {
@@ -44,6 +47,7 @@ class YouTubePlayer extends StatelessWidget {
         onCurrentTime: onCurrentTime,
         onStateChange: onStateChange,
         onEnded: onEnded,
+        onError: onError,
         seekStream: seekStream,
       );
     }

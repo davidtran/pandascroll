@@ -123,7 +123,7 @@ class ProfileHeader extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              "Learning $targetLangName",
+              "learn $targetLangName",
               style: TextStyle(
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w600,

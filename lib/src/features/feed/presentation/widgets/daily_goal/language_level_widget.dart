@@ -12,6 +12,7 @@ class LanguageLevelWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userLanguageProfileProvider).value;
+    print(profile);
     if (profile == null) return const SizedBox.shrink();
     final pawAsync = ref.watch(pawProvider);
     final pawState = pawAsync.value;

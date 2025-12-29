@@ -78,9 +78,9 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
                 elevation: 0,
                 items: [
                   const BottomNavigationBarItem(
-                    icon: Icon(Icons.home_outlined),
-                    activeIcon: Icon(Icons.home_filled),
-                    label: 'Feed',
+                    icon: Icon(Icons.video_library_outlined, size: 20),
+                    activeIcon: Icon(Icons.video_library, size: 20),
+                    label: 'watch',
                   ),
                   BottomNavigationBarItem(
                     icon: Consumer(
@@ -101,14 +101,14 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
                                 right: -4,
                                 top: -4,
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(2),
                                   decoration: const BoxDecoration(
                                     color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
                                   constraints: const BoxConstraints(
-                                    minWidth: 16,
-                                    minHeight: 16,
+                                    minWidth: 10,
+                                    minHeight: 10,
                                   ),
                                   child: Text(
                                     '$dueCount',
@@ -126,12 +126,12 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
                       },
                     ),
                     activeIcon: const Icon(Icons.style),
-                    label: 'Flashcards',
+                    label: 'cards',
                   ),
                   const BottomNavigationBarItem(
                     icon: Icon(Icons.person_outline),
                     activeIcon: Icon(Icons.person),
-                    label: 'Profile',
+                    label: 'profile',
                   ),
                 ],
               ),

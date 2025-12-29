@@ -124,7 +124,7 @@ class _EditProfilePanelState extends ConsumerState<EditProfilePanel> {
           );
 
     return InteractionPanel(
-      title: "Edit Profile",
+      title: "edit",
       onClose: widget.onClose,
       isVisible: true,
       child: Column(

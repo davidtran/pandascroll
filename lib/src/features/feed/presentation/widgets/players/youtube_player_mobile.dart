@@ -17,8 +17,11 @@ class YouTubePlayerMobile extends StatefulWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.onError,
     this.seekStream,
   });
+
+  final Function(String error)? onError;
 
   @override
   State<YouTubePlayerMobile> createState() => _YouTubePlayerMobileState();
@@ -60,6 +63,10 @@ class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
 
   void _listener() {
     if (_isPlayerReady && mounted && !_controller.value.isFullScreen) {
+      if (_controller.value.errorCode != 0) {
+        widget.onError?.call("Error code: ${_controller.value.errorCode}");
+        return;
+      }
       widget.onCurrentTime(_controller.value.position.inMilliseconds / 1000);
 
       if (_controller.value.playerState == PlayerState.ended) {

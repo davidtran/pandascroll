@@ -41,7 +41,7 @@ class ProfileStats extends ConsumerWidget {
                   Icon(Icons.bar_chart_rounded, color: AppColors.primaryBrand),
                   SizedBox(width: 8),
                   Text(
-                    "Your Progress",
+                    "my progress",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w500,
@@ -64,28 +64,28 @@ class ProfileStats extends ConsumerWidget {
                 _buildStatCard(
                   icon: Icons.local_fire_department,
                   value: "$streak Days",
-                  label: "Streak",
+                  label: "streak",
                   color: Colors.orange,
                   bgColor: Colors.white,
                 ),
                 _buildStatCard(
                   icon: Icons.forest,
                   value: "$score",
-                  label: "Total Score",
+                  label: "total Score",
                   color: AppColors.primaryBrand,
                   bgColor: Colors.white,
                 ),
                 _buildStatCard(
                   icon: Icons.schedule,
                   value: timeString,
-                  label: "Studied",
+                  label: "time",
                   color: Colors.purple,
                   bgColor: Colors.white,
                 ),
                 _buildStatCard(
                   icon: Icons.stars,
                   value: "$accuracy%",
-                  label: "Accuracy",
+                  label: "accuracy",
                   color: Colors.blue,
                   bgColor: Colors.white,
                 ),

@@ -86,15 +86,11 @@ class _WordAudioPlayerState extends State<WordAudioPlayer> {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: _isPlaying
-              ? AppColors.primaryBrand.withOpacity(0.2)
+              ? AppColors.pandaBlack.withOpacity(0.2)
               : Colors.transparent,
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          Icons.volume_up_rounded,
-          color: _isPlaying ? AppColors.primaryBrand : Colors.grey[600],
-          size: 24,
-        ),
+        child: Icon(Icons.volume_up_rounded, color: Colors.black, size: 24),
       ),
     );
   }

@@ -5,9 +5,8 @@ import '../domain/models/flashcard_model.dart';
 
 class FlashcardsRepository {
   final SupabaseClient _supabase;
-  final Ref _ref;
 
-  FlashcardsRepository(this._supabase, this._ref);
+  FlashcardsRepository(this._supabase);
 
   Future<void> addFlashcard({
     required String front,
@@ -20,13 +19,20 @@ class FlashcardsRepository {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User not logged in');
 
+    // Sanitize front text if type is word (currently hardcoded)
+    String cleanFront = front.trim().toLowerCase();
+    cleanFront = cleanFront.replaceAll(
+      RegExp(r'^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$', unicode: true),
+      '',
+    );
+
     await _supabase.from('flashcards').upsert({
       'user_id': user.id,
       'video_id': videoId,
       'video_timestamp_start': startTime,
       'video_timestamp_end': endTime,
       'type': 'word',
-      'front': front,
+      'front': cleanFront,
       'back': back,
       'language': language,
       'status': 'new',
@@ -37,16 +43,15 @@ class FlashcardsRepository {
     }, onConflict: 'user_id,front,language');
   }
 
-  Future<List<FlashcardModel>> getDueFlashcards() async {
+  Future<List<FlashcardModel>> getDueFlashcards(String language) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
 
-    final profile = _ref.watch(userProfileProvider).value;
-    final language = profile?['target_language'];
+    // Removed internal ref.watch
 
     var builder = _supabase.from('flashcards').select().eq('user_id', user.id);
 
-    if (language != null && language is String && language.isNotEmpty) {
+    if (language.isNotEmpty) {
       builder = builder.eq('language', language);
     }
 
@@ -58,19 +63,16 @@ class FlashcardsRepository {
     return (response as List).map((e) => FlashcardModel.fromJson(e)).toList();
   }
 
-  Future<int> getDueFlashcardsCount() async {
+  Future<int> getDueFlashcardsCount(String language) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return 0;
-
-    final profile = _ref.watch(userProfileProvider).value;
-    final language = profile?['target_language'];
 
     var builder = _supabase
         .from('flashcards')
         .count(CountOption.exact)
         .eq('user_id', user.id);
 
-    if (language != null && language is String && language.isNotEmpty) {
+    if (language.isNotEmpty) {
       builder = builder.eq('language', language);
     }
 
@@ -82,19 +84,16 @@ class FlashcardsRepository {
     return response;
   }
 
-  Future<int> getTotalFlashcardsCount() async {
+  Future<int> getTotalFlashcardsCount(String language) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return 0;
-
-    final profile = _ref.watch(userProfileProvider).value;
-    final language = profile?['target_language'];
 
     var builder = _supabase
         .from('flashcards')
         .count(CountOption.exact)
         .eq('user_id', user.id);
 
-    if (language != null && language is String && language.isNotEmpty) {
+    if (language.isNotEmpty) {
       builder = builder.eq('language', language);
     }
 
@@ -123,17 +122,21 @@ class FlashcardsRepository {
 }
 
 final flashcardsRepositoryProvider = Provider<FlashcardsRepository>((ref) {
-  return FlashcardsRepository(Supabase.instance.client, ref);
+  return FlashcardsRepository(Supabase.instance.client);
 });
 
 final flashcardsStreamProvider = StreamProvider<List<FlashcardModel>>((ref) {
   final repository = ref.watch(flashcardsRepositoryProvider);
-  return repository.getDueFlashcards().asStream();
+  final profile = ref.watch(userProfileProvider).value;
+  final language = profile?['target_language'] ?? '';
+  return repository.getDueFlashcards(language).asStream();
 });
 
 final flashcardsDueCountProvider = FutureProvider<int>((ref) async {
   final repository = ref.watch(flashcardsRepositoryProvider);
-  return repository.getDueFlashcardsCount();
+  final profile = ref.watch(userProfileProvider).value;
+  final language = profile?['target_language'] ?? '';
+  return repository.getDueFlashcardsCount(language);
 });
 
 final flashcardsUpdateTriggerProvider =

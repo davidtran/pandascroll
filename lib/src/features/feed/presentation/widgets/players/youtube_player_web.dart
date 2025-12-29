@@ -9,6 +9,7 @@ class YouTubePlayerWeb extends StatefulWidget {
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
   final Stream<int>? seekStream;
+  final Function(String error)? onError;
 
   const YouTubePlayerWeb({
     super.key,
@@ -17,6 +18,7 @@ class YouTubePlayerWeb extends StatefulWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.onError,
     this.seekStream,
   });
 
@@ -58,6 +60,10 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
     // Listen to state changes
     _subscription = _controller.listen((value) {
       if (!mounted) return;
+
+      if (value.hasError) {
+        widget.onError?.call(value.error.code.toString());
+      }
 
       if (value.playerState == PlayerState.ended) {
         widget.onStateChange(false);

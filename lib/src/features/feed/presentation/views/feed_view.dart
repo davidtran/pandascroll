@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../controllers/video_controller.dart';
+import '../../data/video_status_repository.dart';
+
 import '../widgets/daily_goal/language_level_widget.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../widgets/interaction_panel.dart';
@@ -180,7 +182,11 @@ class _VideoPageFeed extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // OPTIMIZATION 3: Select specifically what we need.
-    final videos = ref.watch(videoFeedProvider.select((s) => s.videos));
+    final allVideos = ref.watch(videoFeedProvider.select((s) => s.videos));
+    final blockedVideos = ref.watch(blockedVideosProvider);
+    final videos = allVideos
+        .where((v) => !blockedVideos.contains(v.id))
+        .toList();
     final currentIndex = ref.watch(
       videoFeedProvider.select((s) => s.currentIndex),
     );

@@ -19,8 +19,6 @@ class PlayControls extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildControlButton(Icons.replay_5_rounded, onRewind, "Rewind 5s"),
-        const SizedBox(width: 10),
         GestureDetector(
           onTap: onPlayPause,
           child: Container(
@@ -33,6 +31,9 @@ class PlayControls extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
+        _buildControlButton(Icons.replay_5_rounded, onRewind, "Rewind 5s"),
+        const SizedBox(width: 10),
+
         _buildControlButton(Icons.forward_5_rounded, onForward, "Forward 5s"),
       ],
     );

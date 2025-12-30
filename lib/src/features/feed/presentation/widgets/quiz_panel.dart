@@ -636,7 +636,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
                   ],
                 ),
               ),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
 

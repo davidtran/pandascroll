@@ -43,7 +43,9 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
 
   Future<void> _fetchAudio() async {
     try {
-      final response = await ApiClient.get('/audio?video_id=${widget.videoId}');
+      final response = await ApiClient.get(
+        '/audio?id=${widget.videoId}&type=video',
+      );
       if (response['data'] != null) {
         final List<dynamic> list = response['data'];
         final map = <String, String>{};
@@ -79,6 +81,15 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
       );
     } else {
       widget.onComplete();
+    }
+  }
+
+  void _previous() {
+    if (_currentIndex > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -156,11 +167,26 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
 
         // Bottom Actions
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.only(
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            top: AppSpacing.md,
+          ),
           child: Row(
             children: [
+              SizedBox(
+                width: 60,
+                child: PandaButton(
+                  onPressed: _previous,
+                  text: "",
+                  icon: Icons.arrow_back,
+                  backgroundColor: AppColors.primaryBrand,
+                  height: 50,
+                ),
+              ),
+              const SizedBox(width: 8),
               Expanded(
-                flex: 2,
+                flex: 1,
                 child: PandaButton(
                   onPressed: _next,
                   height: 50,

@@ -144,7 +144,7 @@ class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
                         'cc_load_policy': 0,
                         'cc_lang_pref': 'en',
                         'autoplay': ${boolean(value: widget.isPlaying)},
-                        'start': 0
+                        'start': 1
                     },
                     events: {
                         onReady: function(event) { window.flutter_inappwebview.callHandler('Ready'); },
@@ -258,6 +258,7 @@ class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
                   switch (state) {
                     case 0:
                       widget.onEnded();
+                      _play(); // Loop forever
                       break;
                     case 1:
                       widget.onStateChange(true);

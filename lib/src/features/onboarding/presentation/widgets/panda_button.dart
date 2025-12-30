@@ -15,6 +15,7 @@ class PandaButton extends StatefulWidget {
   final double? width;
   final Widget? leading;
   final bool disabled;
+  final Offset shadowOffset;
 
   const PandaButton({
     super.key,
@@ -31,6 +32,7 @@ class PandaButton extends StatefulWidget {
     this.width = double.infinity,
     this.leading,
     this.disabled = false,
+    this.shadowOffset = const Offset(0, 4),
   });
 
   @override
@@ -69,7 +71,7 @@ class _PandaButtonState extends State<PandaButton> {
             if (!_isPressed)
               BoxShadow(
                 color: widget.shadowColor ?? Colors.black.withValues(alpha: 1),
-                offset: const Offset(0, 4),
+                offset: widget.shadowOffset,
                 blurRadius: 0,
               ),
           ],

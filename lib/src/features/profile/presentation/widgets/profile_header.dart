@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 import '../widgets/edit_profile_panel.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/profile_providers.dart';
@@ -135,44 +136,25 @@ class ProfileHeader extends ConsumerWidget {
         const SizedBox(height: 20),
 
         // Edit Button
-        Material(
-          color: AppColors.pandaBlack,
-          borderRadius: BorderRadius.circular(16),
-
-          // ... Inside build method ...
-          child: InkWell(
-            onTap: () async {
-              await showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) =>
-                    EditProfilePanel(onClose: () => Navigator.pop(context)),
-              );
-              // Refresh profile on close
-              ref.refresh(userProfileProvider);
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              width: 180,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              alignment: Alignment.center,
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.edit, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    "Edit Profile",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        PandaButton(
+          onPressed: () async {
+            await showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) =>
+                  EditProfilePanel(onClose: () => Navigator.pop(context)),
+            );
+            // Refresh profile on close
+            ref.refresh(userProfileProvider);
+          },
+          text: "edit",
+          width: 100,
+          height: 40,
+          backgroundColor: Colors.white,
+          shadowOffset: const Offset(0, 2),
+          shadowColor: Colors.grey,
+          borderColor: Colors.grey,
         ),
       ],
     );

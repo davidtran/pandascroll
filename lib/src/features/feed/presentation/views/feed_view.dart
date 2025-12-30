@@ -12,6 +12,7 @@ import '../widgets/video_post.dart';
 import '../widgets/quiz_panel.dart';
 import '../widgets/comments_panel.dart';
 import 'package:pandascroll/src/features/roadmap/presentation/views/roadmap_view.dart';
+import '../../../home/presentation/providers/main_navigation_provider.dart';
 
 class FeedView extends ConsumerStatefulWidget {
   const FeedView({super.key});
@@ -188,6 +189,8 @@ class _VideoPageFeed extends ConsumerWidget {
     final currentIndex = ref.watch(
       videoFeedProvider.select((s) => s.currentIndex),
     );
+    final mainNavIndex = ref.watch(mainNavigationIndexProvider);
+    final isFeedTabActive = mainNavIndex == 0;
 
     return PageView.builder(
       controller: pageController,
@@ -202,7 +205,7 @@ class _VideoPageFeed extends ConsumerWidget {
       itemBuilder: (context, index) {
         return VideoPost(
           video: videos[index],
-          isPlaying: index == currentIndex && !isPanelOpen,
+          isPlaying: index == currentIndex && !isPanelOpen && isFeedTabActive,
           hideContent: isPanelOpen,
           onStartQuiz: () => onOpenPanel(
             "Loading...",

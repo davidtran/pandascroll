@@ -40,7 +40,7 @@ class FlashcardsRepository {
       'interval': 0,
       'ease_factor': 2.5,
       'next_review_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'user_id,front,language');
+    }, onConflict: 'user_id, front, language');
   }
 
   Future<List<FlashcardModel>> getDueFlashcards(String language) async {

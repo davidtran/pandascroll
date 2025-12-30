@@ -5,6 +5,7 @@ import '../../../feed/presentation/views/feed_view.dart';
 import '../../../flashcards/presentation/views/flashcards_view.dart';
 import '../../../flashcards/data/flashcards_repository.dart';
 import '../../../profile/presentation/views/profile_view.dart';
+import '../providers/main_navigation_provider.dart';
 
 class MainNavigationView extends ConsumerStatefulWidget {
   const MainNavigationView({super.key});
@@ -23,6 +24,7 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
   ];
 
   void _onItemTapped(int index) {
+    ref.read(mainNavigationIndexProvider.notifier).state = index;
     setState(() {
       _currentIndex = index;
     });

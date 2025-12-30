@@ -6,11 +6,13 @@ import '../../../profile/presentation/views/profile_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/settings_provider.dart';
+
 import '../../../../core/utils/language_utils.dart';
+import '../../../../core/utils/navigation.dart';
 import '../../data/stats_repository.dart';
 import '../../domain/models/video_model.dart';
 import '../../domain/models/dictionary_model.dart';
@@ -53,8 +55,9 @@ class VideoPost extends ConsumerStatefulWidget {
   ConsumerState<VideoPost> createState() => _VideoPostState();
 }
 
-class _VideoPostState extends ConsumerState<VideoPost> {
+class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   bool _isPaused = false;
+  bool _isNavigatedAway = false;
   Timer? _progressTimer;
   bool _isMuted = false;
   bool _xpAwarded = false;
@@ -78,10 +81,17 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     super.didChangeDependencies();
     _statsRepository = ref.read(statsRepositoryProvider);
     _profileNotifier = ref.read(userLanguageProfileProvider.notifier);
+
+    // Subscribe to RouteObserver
+    final route = ModalRoute.of(context);
+    if (route is ModalRoute<void>) {
+      routeObserver.subscribe(this, route);
+    }
   }
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _saveStats(widget.video);
     _stopTimer();
     _currentTimeNotifier.removeListener(_tutorialListener);
@@ -266,6 +276,22 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   }
 
   @override
+  void didPushNext() {
+    // Called when a new route is pushed on top of this one (e.g. ProfileView)
+    setState(() {
+      _isNavigatedAway = true;
+    });
+  }
+
+  @override
+  void didPopNext() {
+    // Called when the top route is popped and this one becomes visible again
+    setState(() {
+      _isNavigatedAway = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
 
@@ -273,8 +299,12 @@ class _VideoPostState extends ConsumerState<VideoPost> {
     // 1. Must be the active video (widget.isPlaying)
     // 2. Must not be manually paused (_isPaused)
     // 3. Must not have content hidden (panel open)
+    // 4. Must not be navigated away
     final effectiveIsPlaying =
-        widget.isPlaying && !_isPaused && !widget.hideContent;
+        widget.isPlaying &&
+        !_isPaused &&
+        !widget.hideContent &&
+        !_isNavigatedAway;
 
     final isYouTube = widget.video.platformType.toLowerCase() == 'youtube';
     String videoId = widget.video.externalId;
@@ -286,7 +316,6 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       fit: StackFit.expand,
       children: [
         _buildPlayer(effectiveIsPlaying),
-
         if (_isPaused || !widget.isPlaying && !widget.hideContent)
           Center(
             child: GestureDetector(
@@ -330,6 +359,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
                       ],
                     ),
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -623,6 +653,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
   }) {
     return GestureDetector(
       onTap: onTap,
+      behavior: .translucent,
       child: Column(
         children: [
           Container(

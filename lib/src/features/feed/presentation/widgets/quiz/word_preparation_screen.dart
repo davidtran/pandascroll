@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../flashcards/data/flashcards_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/network/api_client.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_dimens.dart';
@@ -204,6 +205,51 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
     );
   }
 
+  Future<void> _markWordAsKnown(String word) async {
+    final cleanWord = word
+        .trim()
+        .replaceAll(RegExp(r'^[^\w]+|[^\w]+$'), '')
+        .toLowerCase();
+    if (cleanWord.isEmpty) return;
+
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      await Supabase.instance.client.from('user_known_words').upsert({
+        'user_id': userId,
+        'word': cleanWord,
+        'language': widget.language,
+      }, onConflict: 'user_id,word,language');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Word marked as known. It won't appear in future exercises.",
+              style: TextStyle(color: Colors.black),
+            ),
+            backgroundColor: Colors.amberAccent,
+
+            duration: Duration(seconds: 2),
+          ),
+        );
+        if (_currentIndex < _items.length - 1) {
+          _next();
+        } else {
+          widget.onComplete();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error marking word as known: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Widget _buildWordCard(WordItem word, bool autoPlay) {
     final audioUrl = _audioMap[word.word];
 
@@ -305,7 +351,7 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
                           },
                           icon: const Icon(
                             Icons.bookmark_add_outlined,
-                            color: AppColors.primaryBrand,
+                            color: AppColors.pandaBlack,
                           ),
                         ),
                       ],
@@ -356,88 +402,19 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
 
           const SizedBox(height: AppSpacing.xl),
 
-          // How to use
-          if (word.howToUse.isNotEmpty) ...[
-            const Text(
-              "HOW TO USE",
+          GestureDetector(
+            onTap: () => _markWordAsKnown(word.word),
+            child: Text(
+              "mark as known",
+              textAlign: .center,
               style: TextStyle(
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
                 color: Colors.grey,
+                decoration: TextDecoration.underline,
               ),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(AppRadius.button),
-                border: Border.all(color: Colors.black),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black,
-                    blurRadius: 0,
-                    offset: const Offset(4, 4),
-                  ),
-                ],
-              ),
-              child: Text(
-                word.howToUse,
-                style: TextStyle(color: Colors.grey[600], fontSize: 20),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-
-          // Examples
-          if (word.examples.isNotEmpty) ...[
-            const Text(
-              "EXAMPLES",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...word.examples.map(
-              (ex) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.button),
-                    border: Border.all(color: Colors.black),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black,
-                        blurRadius: 0,
-                        offset: const Offset(4, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ex.text,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        ex.translation,
-                        style: TextStyle(color: Colors.grey[700], fontSize: 20),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
@@ -452,54 +429,111 @@ class _WordPreparationScreenState extends ConsumerState<WordPreparationScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            alignment: Alignment.center,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.orange[100],
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                "KEY SENTENCE",
-                style: TextStyle(
-                  color: Colors.orange[800],
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-
-          Container(
             padding: const EdgeInsets.all(AppSpacing.xl),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(AppRadius.card),
               border: Border.all(color: Colors.black),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black,
                   blurRadius: 0,
-                  offset: const Offset(4, 4),
+                  offset: Offset(4, 4),
                 ),
               ],
             ),
             child: Column(
               children: [
-                if (audioUrl != null) ...[
-                  WordAudioPlayer(url: audioUrl, autoPlay: autoPlay),
-                  const SizedBox(height: 8),
-                ],
-                Text(
-                  sentence.text,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
+                // Header: Key Sentence Badge + Save Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        "KEY SENTENCE",
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(flashcardsRepositoryProvider)
+                              .addFlashcard(
+                                front: sentence.text,
+                                back: [sentence.translation],
+                                videoId: widget.videoId,
+                                language: widget.language,
+                              );
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Added to Flashcards",
+                                  style: TextStyle(color: AppColors.pandaBlack),
+                                ),
+                                duration: Duration(seconds: 1),
+                                backgroundColor: Colors.amberAccent,
+                              ),
+                            );
+                            ref
+                                .read(flashcardsUpdateTriggerProvider.notifier)
+                                .trigger();
+                            ref.refresh(flashcardsDueCountProvider);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Error: $e"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.bookmark_add_outlined,
+                        color: AppColors.pandaBlack,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Sentence Text + Audio Icon
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        sentence.text,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    if (audioUrl != null) ...[
+                      const SizedBox(width: 8),
+                      WordAudioPlayer(url: audioUrl, autoPlay: autoPlay),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 24),
                 const Divider(),

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'src/core/theme/app_theme.dart';
-import 'src/features/onboarding/presentation/views/landing_view.dart';
 
+import 'package:flutter/gestures.dart'; // Import this
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/features/auth/presentation/controllers/auth_controller.dart';
 import 'src/features/auth/presentation/views/root_view.dart';
-import 'src/features/feed/presentation/views/feed_view.dart';
 
 import 'src/core/utils/navigation.dart';
 import 'src/core/services/notification_service.dart';
@@ -39,6 +38,15 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       home: const RootView(),
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver],
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.unknown,
+        },
+      ),
     );
   }
 }

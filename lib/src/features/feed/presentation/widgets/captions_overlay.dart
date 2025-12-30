@@ -211,6 +211,7 @@ class _HighlightableWord extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: ValueListenableBuilder<int>(
         valueListenable: activeWordIndexNotifier,
         builder: (context, activeIndex, _) {

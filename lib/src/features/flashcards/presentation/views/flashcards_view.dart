@@ -451,6 +451,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                           _isEnded = true;
                         }),
                       },
+                      threshold: 100,
 
                       numberOfCardsDisplayed: min(3, _reviewQueue.length),
                       padding: const EdgeInsets.all(24.0),
@@ -472,12 +473,12 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
 
                             // Threshold for visibility
                             final showHard =
-                                opacityX < -0.1; // Left swipe (negative X)
+                                opacityX < -0.25; // Left swipe (negative X)
                             final showEasy =
-                                opacityX > 0.1; // Right swipe (positive X)
+                                opacityX > 0.25; // Right swipe (positive X)
                             final showGood =
                                 opacityY.abs() >
-                                0.1; // Top/Bottom swipe (Y axis)
+                                0.25; // Top/Bottom swipe (Y axis)
 
                             return GestureDetector(
                               onTap: () => _flipCard(index),
@@ -547,14 +548,14 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                                   if (showEasy)
                                     _buildSwipeOverlay(
                                       "EASY",
-                                      const Color(0xFF13ec80),
+                                      Colors.orangeAccent,
                                       Alignment.topLeft,
                                       opacity: (opacityX).clamp(0.0, 1.0),
                                     ),
                                   if (showGood)
                                     _buildSwipeOverlay(
                                       "GOOD",
-                                      Colors.orangeAccent,
+                                      const Color(0xFF13ec80),
                                       Alignment.center,
                                       opacity: (opacityY.abs()).clamp(0.0, 1.0),
                                     ),
@@ -718,30 +719,44 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
             color: color.withOpacity(0.1 * opacity),
             borderRadius: BorderRadius.circular(64),
           ),
-          child: Center(
-            child: Transform.rotate(
-              angle: -0.2,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20.0),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
+                  color: color,
                   border: Border.all(
                     color: color.withOpacity(opacity),
                     width: 4,
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                    fontFamily: 'Fredoka',
-                    letterSpacing: 2,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'mark as',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w300,
+                        color: Colors.white,
+                        fontFamily: 'Fredoka',
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    Text(
+                      text,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'Fredoka',
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

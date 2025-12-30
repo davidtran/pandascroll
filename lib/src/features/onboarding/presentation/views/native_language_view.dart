@@ -52,7 +52,7 @@ class NativeLanguageView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "which language?",
+                        "what language you speak?",
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w700,

@@ -61,23 +61,38 @@ class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
     )..addListener(_listener);
   }
 
+  int _lastErrorCode = 0;
+
   void _listener() {
-    if (_isPlayerReady && mounted && !_controller.value.isFullScreen) {
-      if (_controller.value.errorCode != 0) {
-        widget.onError?.call("Error code: ${_controller.value.errorCode}");
-        return;
-      }
-      widget.onCurrentTime(_controller.value.position.inMilliseconds / 1000);
-
-      if (_controller.value.playerState == PlayerState.ended) {
-        widget.onEnded();
+    if (mounted && !_controller.value.isFullScreen) {
+      // Handle Ready State
+      if (!_isPlayerReady && _controller.value.isReady) {
+        _isPlayerReady = true;
+        if (widget.isPlaying) {
+          _controller.play();
+        }
       }
 
-      // Update playing state based on player state
-      final isPlaying = _controller.value.isPlaying;
-      if (widget.isPlaying != isPlaying) {
-        // We usually want to notify parent if state changes internally (e.g. buffering).
-        widget.onStateChange(isPlaying);
+      if (_isPlayerReady) {
+        final currentErrorCode = _controller.value.errorCode;
+        if (currentErrorCode != 0 && currentErrorCode != _lastErrorCode) {
+          _lastErrorCode = currentErrorCode;
+          widget.onError?.call("Error code: $currentErrorCode");
+        }
+
+        // Optimization: Only callback if time changed
+        final currentTime = _controller.value.position.inMilliseconds / 1000;
+        widget.onCurrentTime(currentTime);
+
+        if (_controller.value.playerState == PlayerState.ended) {
+          widget.onEnded();
+        }
+
+        // Update playing state based on player state
+        final isPlaying = _controller.value.isPlaying;
+        if (widget.isPlaying != isPlaying) {
+          widget.onStateChange(isPlaying);
+        }
       }
     }
   }
@@ -117,18 +132,25 @@ class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
 
   @override
   Widget build(BuildContext context) {
-    return YoutubePlayer(
-      controller: _controller,
-      showVideoProgressIndicator: false,
-      onReady: () {
-        _isPlayerReady = true;
-        if (widget.isPlaying) {
-          _controller.play();
-        }
-      },
-      onEnded: (data) {
-        widget.onEnded();
-      },
+    return RepaintBoundary(
+      child: YoutubePlayer(
+        controller: _controller,
+        showVideoProgressIndicator: false,
+        topActions: const [],
+        bottomActions: const [],
+        onReady: () {
+          // Ensure ready state is set if not already
+          if (!_isPlayerReady) {
+            _isPlayerReady = true;
+            if (widget.isPlaying) {
+              _controller.play();
+            }
+          }
+        },
+        onEnded: (data) {
+          widget.onEnded();
+        },
+      ),
     );
   }
 }

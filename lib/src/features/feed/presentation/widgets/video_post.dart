@@ -211,6 +211,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       _currentTimeNotifier.value = 0.0;
       _isPaused = false;
       _xpAwarded = false;
+      _isVideoLoaded = false;
     });
   }
 

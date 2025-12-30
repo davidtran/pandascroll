@@ -367,7 +367,9 @@ class _EditProfilePanelState extends ConsumerState<EditProfilePanel> {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.grey[100]!, width: 1),
                 image: DecorationImage(
-                  image: NetworkImage(selectedOption.flagUrl),
+                  image: AssetImage(
+                    'assets/images/flags/${selectedOption.flagUrl}',
+                  ),
                   fit: BoxFit.cover,
                 ),
               ),

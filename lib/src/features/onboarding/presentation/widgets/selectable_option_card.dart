@@ -87,7 +87,7 @@ class _SelectableOptionCardState extends State<SelectableOptionCard> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.grey[100]!, width: 2),
                   image: DecorationImage(
-                    image: NetworkImage(widget.imageUrl!),
+                    image: AssetImage('assets/images/flags/${widget.imageUrl}'),
                     fit: BoxFit.cover,
                   ),
                 ),

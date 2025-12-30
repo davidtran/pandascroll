@@ -480,47 +480,48 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                 ],
                 const SizedBox(height: 32),
                 // Footer Controls (Ratings trigger Swipes)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Hard (Left)
-                      _buildRatingFab(
-                        "hard",
-                        FaIcon(
-                          FontAwesomeIcons.faceFrown,
-                          color: Colors.black,
-                          size: 16,
+                if (!_isEnded)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Hard (Left)
+                        _buildRatingFab(
+                          "hard",
+                          FaIcon(
+                            FontAwesomeIcons.faceFrown,
+                            color: Colors.black,
+                            size: 16,
+                          ),
+                          Colors.redAccent,
+                          () => _rateAndSwipe(CardRating.hard),
                         ),
-                        Colors.redAccent,
-                        () => _rateAndSwipe(CardRating.hard),
-                      ),
-                      // Good (Right)
-                      _buildRatingFab(
-                        "good",
-                        FaIcon(
-                          FontAwesomeIcons.faceMeh,
-                          color: Colors.black,
-                          size: 16,
+                        // Good (Right)
+                        _buildRatingFab(
+                          "good",
+                          FaIcon(
+                            FontAwesomeIcons.faceMeh,
+                            color: Colors.black,
+                            size: 16,
+                          ),
+                          primaryGreen,
+                          () => _rateAndSwipe(CardRating.good),
                         ),
-                        primaryGreen,
-                        () => _rateAndSwipe(CardRating.good),
-                      ),
-                      // Easy (Top)
-                      _buildRatingFab(
-                        "easy",
-                        FaIcon(
-                          FontAwesomeIcons.faceGrinBeam,
-                          color: Colors.black,
-                          size: 16,
+                        // Easy (Top)
+                        _buildRatingFab(
+                          "easy",
+                          FaIcon(
+                            FontAwesomeIcons.faceGrinBeam,
+                            color: Colors.black,
+                            size: 16,
+                          ),
+                          accentOrange,
+                          () => _rateAndSwipe(CardRating.easy),
                         ),
-                        accentOrange,
-                        () => _rateAndSwipe(CardRating.easy),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),

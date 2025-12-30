@@ -72,7 +72,7 @@ class NativeLanguageView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "select your native language so langrot can help you!",
+                        "select your native language so lingodrip can help you!",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textLight,

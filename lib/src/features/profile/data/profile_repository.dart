@@ -195,6 +195,17 @@ class ProfileRepository {
       return null;
     }
   }
+
+  Future<void> deleteUserData() async {
+    try {
+      await ApiClient.delete('/delete-data');
+      // After successful deletion, sign out
+      await _client.auth.signOut();
+    } catch (e) {
+      print('Error deleting user data: $e');
+      rethrow;
+    }
+  }
 }
 
 final profileRepositoryProvider = Provider((ref) {

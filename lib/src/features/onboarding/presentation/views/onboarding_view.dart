@@ -44,7 +44,7 @@ class _OnboardingViewState extends State<OnboardingView> {
       "image": "assets/images/panda_thinking.png",
     },
     {
-      "step": "step 3: langrot",
+      "step": "step 3: fluency",
       "icon": Icons.psychology_rounded,
       "titlePrefix": "rot your brain with a",
       "imageWidth": 180,

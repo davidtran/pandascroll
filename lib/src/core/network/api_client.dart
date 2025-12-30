@@ -51,6 +51,24 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    final token = _getToken();
+    if (token == null) {
+      _redirectToLogin();
+      throw Exception('User not authenticated');
+    }
+
+    final response = await http.delete(
+      Uri.parse('$_baseUrl$endpoint'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return _handleResponse(response);
+  }
+
   static Future<Map<String, dynamic>> upload(
     String endpoint, {
     required String filePath,

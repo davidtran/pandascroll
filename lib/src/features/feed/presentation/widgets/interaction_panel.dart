@@ -54,7 +54,9 @@ class InteractionPanelWidget extends State<InteractionPanel> {
             ),
 
           // Sliding Panel
-          Positioned(
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             left: 0,
             right: 0,
             bottom: widget.isVisible ? 0 : -panelHeight,

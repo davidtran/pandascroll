@@ -71,11 +71,13 @@ class _VideoPostState extends ConsumerState<VideoPost> {
 
   TutorialCoachMark? tutorialCoachMark;
   late StatsRepository _statsRepository;
+  UserLanguageProfileNotifier? _profileNotifier;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _statsRepository = ref.read(statsRepositoryProvider);
+    _profileNotifier = ref.read(userLanguageProfileProvider.notifier);
   }
 
   @override
@@ -199,9 +201,7 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       // Add XP for watching video
       if (!_xpAwarded) {
         _xpAwarded = true;
-        ref
-            .read(userLanguageProfileProvider.notifier)
-            .addXp(event: 'watch_video', videoId: widget.video.id);
+        _profileNotifier?.addXp(event: 'watch_video', videoId: widget.video.id);
       }
     }
   }

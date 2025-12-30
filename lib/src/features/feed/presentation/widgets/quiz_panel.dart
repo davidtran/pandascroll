@@ -595,48 +595,42 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
 
             if (!_isCompleted && _lives > 0 && !_isLoading)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(horizontal: 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () {
-                          if (_preparationData != null &&
-                              !_isPreparationCompleted) {
-                            // Skip Preparation
-                            setState(() {
-                              _isPreparationCompleted = true;
-                            });
-                          } else {
-                            // SKIP Question
-                            setState(() {
-                              if (_answerStatus.length <= _currentIndex) {
-                                _answerStatus.add(AnswerStatus.unanswer);
-                              }
-                              if (_lives > 0) _lives--;
-                            });
-                            _nextExercise();
-                          }
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: .center,
-                          children: [
-                            Text(
-                              (_preparationData != null &&
-                                      !_isPreparationCompleted)
-                                  ? "Skip Preparation"
-                                  : "Skip Question",
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(width: 4),
-                            if (_isPreparationCompleted)
-                              FaIcon(FontAwesomeIcons.heartCrack, size: 14),
-                          ],
-                        ),
+                    TextButton(
+                      onPressed: () {
+                        if (_preparationData != null &&
+                            !_isPreparationCompleted) {
+                          setState(() {
+                            _isPreparationCompleted = true;
+                          });
+                        } else {
+                          setState(() {
+                            if (_answerStatus.length <= _currentIndex) {
+                              _answerStatus.add(AnswerStatus.unanswer);
+                            }
+                            if (_lives > 0) _lives--;
+                          });
+                          _nextExercise();
+                        }
+                      },
+                      style: TextButton.styleFrom(foregroundColor: Colors.grey),
+                      child: Row(
+                        mainAxisAlignment: .center,
+                        children: [
+                          Text(
+                            (_preparationData != null &&
+                                    !_isPreparationCompleted)
+                                ? "Skip Preparation"
+                                : "Skip Question",
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(width: 4),
+                          if (_isPreparationCompleted)
+                            FaIcon(FontAwesomeIcons.heartCrack, size: 14),
+                        ],
                       ),
                     ),
                   ],

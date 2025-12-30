@@ -102,5 +102,35 @@ class LanguageConstants {
       flagUrl:
           'https://lh3.googleusercontent.com/aida-public/AB6AXuD3S9zIxo4YYVcX4a1fQOdFliN5UYl_zqk6Bgm2-nzBZVqCr7J78SPJnvBPS5XunRN60_SiHhRgvq787vw1RJmmAugtyI2-jZSyP0YK3QAoAYG-kqs5aBcWmUmPkv_qT3WqE7I2PGH8vKujDE9PshVXVBmL6fpwrPgwLwNqTOa8Q4qa1WIHOTVn-XCLy8YySG1sn9IJsEGW3hDo0ClHkq7Giu-si8ALHZbdddOdNInStiOLmZ4YE6LnvGyfX0ol0xco3Ua9fHqJxt8',
     ),
+    LanguageOption(
+      code: 'vi',
+      name: 'Vietnamese',
+      subtitle: 'Tiếng Việt',
+      flagUrl: 'https://flagcdn.com/w160/vn.png',
+    ),
+    LanguageOption(
+      code: 'it',
+      name: 'Italian',
+      subtitle: 'Italiano',
+      flagUrl: 'https://flagcdn.com/w160/it.png',
+    ),
+    LanguageOption(
+      code: 'ru',
+      name: 'Russian',
+      subtitle: 'Русский',
+      flagUrl: 'https://flagcdn.com/w160/ru.png',
+    ),
+    LanguageOption(
+      code: 'id',
+      name: 'Indonesian',
+      subtitle: 'Bahasa Indonesia',
+      flagUrl: 'https://flagcdn.com/w160/id.png',
+    ),
+    LanguageOption(
+      code: 'th',
+      name: 'Thai',
+      subtitle: 'ไทย',
+      flagUrl: 'https://flagcdn.com/w160/th.png',
+    ),
   ];
 }

@@ -4,6 +4,7 @@ class LanguageOption {
   final String subtitle; // Native name or "Hello"
   final String flagUrl;
   final bool available;
+  final bool keepCase;
 
   const LanguageOption({
     required this.code,
@@ -11,5 +12,6 @@ class LanguageOption {
     required this.subtitle,
     required this.flagUrl,
     this.available = true,
+    this.keepCase = false,
   });
 }

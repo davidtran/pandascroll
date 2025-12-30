@@ -30,6 +30,16 @@ class NativeLanguageView extends ConsumerWidget {
 
     final currentCode = ref.watch(onboardingProvider).nativeLanguage;
 
+    // Detect device locale to prioritize
+    final deviceLocale = View.of(
+      context,
+    ).platformDispatcher.locale.languageCode;
+    final isDeviceSupported = LanguageConstants.nativeLanguages.any(
+      (l) => l.code == deviceLocale,
+    );
+
+    final suggestedCodes = isDeviceSupported ? [deviceLocale] : ['en'];
+
     return Scaffold(
       backgroundColor: creamBg,
       body: SafeArea(
@@ -52,7 +62,7 @@ class NativeLanguageView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        "what language you speak?",
+                        "I speak",
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w700,
@@ -86,7 +96,7 @@ class NativeLanguageView extends ConsumerWidget {
                         LanguageSelectorWidget(
                           showSearch: false,
                           languages: LanguageConstants.nativeLanguages
-                              .where((l) => ['en', 'es'].contains(l.code))
+                              .where((l) => suggestedCodes.contains(l.code))
                               .toList(),
                           selectedLanguageCode: currentCode,
                           onSelected: (code) {
@@ -104,7 +114,7 @@ class NativeLanguageView extends ConsumerWidget {
                         LanguageSelectorWidget(
                           showSearch: true,
                           languages: LanguageConstants.nativeLanguages
-                              .where((l) => !['en', 'es'].contains(l.code))
+                              .where((l) => !suggestedCodes.contains(l.code))
                               .toList(),
                           selectedLanguageCode: currentCode,
                           onSelected: (code) {

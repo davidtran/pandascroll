@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:pandascroll/src/features/feed/presentation/widgets/players/custom_youtube_player.dart';
 
 // Conditionally import the correct implementation?
 // Or just import both and switch at runtime (assuming packages don't conflict at compile time).
@@ -41,7 +42,7 @@ class YouTubePlayer extends StatelessWidget {
         seekStream: seekStream,
       );
     } else {
-      return YouTubePlayerMobile(
+      return CustomYouTubePlayerMobile(
         videoId: videoId,
         isPlaying: isPlaying,
         onCurrentTime: onCurrentTime,

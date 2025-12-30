@@ -40,33 +40,29 @@ class InteractionPanelWidget extends State<InteractionPanel> {
     final screenHeight = MediaQuery.of(context).size.height;
     final panelHeight = screenHeight * 0.75;
 
-    return Stack(
-      children: [
-        // Barrier
-        if (widget.isVisible)
-          Positioned.fill(
-            child: PointerInterceptor(
+    return RepaintBoundary(
+      child: Stack(
+        children: [
+          // Barrier
+          if (widget.isVisible)
+            Positioned.fill(
               child: GestureDetector(
                 onTap: widget.barrierDismissible ? handleClose : null,
                 behavior: HitTestBehavior.opaque,
-                child: Container(color: Colors.black54),
+                child: Container(color: Colors.black),
               ),
             ),
-          ),
 
-        // Sliding Panel
-        AnimatedPositioned(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          left: 0,
-          right: 0,
-          bottom: widget.isVisible ? 0 : -panelHeight,
-          height: panelHeight,
-          child: PointerInterceptor(
-            child: _buildPanelContent(), // Call the new method for content
+          // Sliding Panel
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: widget.isVisible ? 0 : -panelHeight,
+            height: panelHeight,
+            child: _buildPanelContent(),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

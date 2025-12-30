@@ -97,9 +97,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   // Language Level (Left)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: PointerInterceptor(
-                      child: const LanguageLevelWidget(),
-                    ),
+                    child: LanguageLevelWidget(),
                   ),
                 ],
               ),
@@ -195,6 +193,7 @@ class _VideoPageFeed extends ConsumerWidget {
       controller: pageController,
       scrollDirection: Axis.vertical,
       itemCount: videos.length,
+
       // Use allowImplicitScrolling to keep previous/next video ready in memory
       allowImplicitScrolling: true,
       onPageChanged: (index) {

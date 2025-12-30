@@ -287,51 +287,20 @@ class _VideoPostState extends ConsumerState<VideoPost> {
       children: [
         _buildPlayer(effectiveIsPlaying),
 
-        // Removed: if (!_isInitialized) ... Loading indicator
-        // We can add it back if the Players report "isLoaded" state,
-        // but for now let's rely on the player's native loading or add a callback later.
-        // 1. Transparent Tap Layer
-        PointerInterceptor(
-          child: GestureDetector(
-            onTap: _togglePlayPause,
-            child: Container(color: Colors.transparent),
-          ),
-        ),
-
-        // 3. Bottom Gradient (For text readability)
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 150,
-          child: IgnorePointer(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-        ),
         if (_isPaused || !widget.isPlaying && !widget.hideContent)
           Center(
-            child: PointerInterceptor(
-              child: GestureDetector(
-                onTap: _togglePlayPause,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 64,
-                  ),
+            child: GestureDetector(
+              onTap: _togglePlayPause,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 64,
                 ),
               ),
             ),
@@ -340,89 +309,87 @@ class _VideoPostState extends ConsumerState<VideoPost> {
         Positioned(
           right: 16,
           bottom: 80, // Adjusted to sit above button
-          child: PointerInterceptor(
-            child: Column(
-              children: [
-                // Profile
-                Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
+          child: Column(
+            children: [
+              // Profile
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileView(),
                           ),
-                        ],
-                      ),
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ProfileView(),
+                        );
+                      },
+                      child: Consumer(
+                        builder: (context, ref, child) {
+                          final profileAsync = ref.watch(userProfileProvider);
+                          final avatarUrl =
+                              profileAsync.value?['avatar_url'] as String?;
+
+                          return CircleAvatar(
+                            radius: 20,
+                            backgroundImage: NetworkImage(
+                              avatarUrl ??
+                                  "https://lh3.googleusercontent.com/aida-public/AB6AXuANlJyF7pvtcA0vFRyJEQFa7XkoUIgUyQWhE4Gc5CZE8a4qkbeRdMDmCCNIqHtI5LhZkzSGSyBvbeCZz0oq0FcN3KL1M-MvQ2l4sJ1mjtyIoIfghT_RcENVTfhs5UmfWeF3Hy_lunl8MS3gOi6healG8WlHFAwKXJvg1o-2dbVwZ9NWy5seJpd-Y0ppzUuDydRuCBKS8aXs7q-0XAYayTXRuct4XnkgMaCvJzy8ef9tfS5sXuoBtbz3tcoEn-kaFdYvJebPEUqDxoE",
                             ),
                           );
                         },
-                        child: Consumer(
-                          builder: (context, ref, child) {
-                            final profileAsync = ref.watch(userProfileProvider);
-                            final avatarUrl =
-                                profileAsync.value?['avatar_url'] as String?;
-
-                            return CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(
-                                avatarUrl ??
-                                    "https://lh3.googleusercontent.com/aida-public/AB6AXuANlJyF7pvtcA0vFRyJEQFa7XkoUIgUyQWhE4Gc5CZE8a4qkbeRdMDmCCNIqHtI5LhZkzSGSyBvbeCZz0oq0FcN3KL1M-MvQ2l4sJ1mjtyIoIfghT_RcENVTfhs5UmfWeF3Hy_lunl8MS3gOi6healG8WlHFAwKXJvg1o-2dbVwZ9NWy5seJpd-Y0ppzUuDydRuCBKS8aXs7q-0XAYayTXRuct4XnkgMaCvJzy8ef9tfS5sXuoBtbz3tcoEn-kaFdYvJebPEUqDxoE",
-                              ),
-                            );
-                          },
-                        ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
 
-                // Like
-                _buildActionItem(
-                  Icons.favorite_rounded,
-                  "12.5k",
-                  Colors.white,
-                  isLike: true,
-                ),
-                const SizedBox(height: 20),
+              // Like
+              _buildActionItem(
+                Icons.favorite_rounded,
+                "12.5k",
+                Colors.white,
+                isLike: true,
+              ),
+              const SizedBox(height: 20),
 
-                _buildActionItem(
-                  Icons.chat_bubble_rounded,
-                  "342", // TODO: Real count
-                  Colors.white,
-                  onTap: () {
-                    widget.onShowPanel(
-                      "Comments 💬",
-                      CommentsPanel(videoId: widget.video.id),
-                    );
-                  },
-                  size: 24,
-                ),
-                const SizedBox(height: 20),
-                _buildActionItem(
-                  settings.captions
-                      ? Icons.closed_caption
-                      : Icons.closed_caption_off,
-                  "Caption",
-                  Colors.white,
-                  onTap: _toggleCaptions,
-                ),
-              ],
-            ),
+              _buildActionItem(
+                Icons.chat_bubble_rounded,
+                "342", // TODO: Real count
+                Colors.white,
+                onTap: () {
+                  widget.onShowPanel(
+                    "Comments 💬",
+                    CommentsPanel(videoId: widget.video.id),
+                  );
+                },
+                size: 24,
+              ),
+              const SizedBox(height: 20),
+              _buildActionItem(
+                settings.captions
+                    ? Icons.closed_caption
+                    : Icons.closed_caption_off,
+                "Caption",
+                Colors.white,
+                onTap: _toggleCaptions,
+              ),
+            ],
           ),
         ),
 
@@ -431,58 +398,56 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           left: 16,
           right: 80, // Space for actions
           bottom: 80, // aligned with actions bottom
-          child: PointerInterceptor(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Captions Overlay
-                if (settings.captions)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: RepaintBoundary(
-                      child: CaptionsOverlay(
-                        key: _captionsKey,
-                        currentTimeNotifier: _currentTimeNotifier,
-                        captions: widget.video.captions,
-                        onWordTap: _handleWordTap,
-                        translations: widget.video.translations,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Captions Overlay
+              if (settings.captions)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: RepaintBoundary(
+                    child: CaptionsOverlay(
+                      key: _captionsKey,
+                      currentTimeNotifier: _currentTimeNotifier,
+                      captions: widget.video.captions,
+                      onWordTap: _handleWordTap,
+                      translations: widget.video.translations,
+                    ),
+                  ),
+                ),
+
+              // Title (Chinese)
+              if (widget.video.title.isNotEmpty)
+                Text(
+                  widget.video.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w100,
+                    height: 1.1,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
                       ),
-                    ),
+                    ],
                   ),
+                ),
 
-                // Title (Chinese)
-                if (widget.video.title.isNotEmpty)
-                  Text(
-                    widget.video.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w100,
-                      height: 1.1,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
+              // Play Controls
+              if (widget.video.platformType.toLowerCase() == 'youtube')
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: PlayControls(
+                    isPlaying: effectiveIsPlaying,
+                    onPlayPause: _togglePlayPause,
+                    onRewind: () => _seekController.add(-5),
+                    onForward: () => _seekController.add(5),
                   ),
-
-                // Play Controls
-                if (widget.video.platformType.toLowerCase() == 'youtube')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
-                    child: PlayControls(
-                      isPlaying: effectiveIsPlaying,
-                      onPlayPause: _togglePlayPause,
-                      onRewind: () => _seekController.add(-5),
-                      onForward: () => _seekController.add(5),
-                    ),
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
 
@@ -494,49 +459,47 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: widget.hideContent ? 0.0 : 1.0,
-            child: PointerInterceptor(
-              child: IgnorePointer(
-                ignoring: widget.hideContent,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 60,
-                        child: Container(
-                          key: _startExerciseKey,
-                          child: PandaButton(
-                            text: "START EXERCISE",
-                            onPressed: widget.onStartQuiz,
-                            disabled: _isTutorialShowing,
-                            icon: Icons.pets,
-                            borderColor: Colors.black,
-                            shadowColor: const Color.fromARGB(255, 38, 38, 38),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Skip Button
-                    SizedBox(
-                      width: 60,
+            child: IgnorePointer(
+              ignoring: widget.hideContent,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
                       height: 60,
                       child: Container(
-                        key: _nextButtonKey,
+                        key: _startExerciseKey,
                         child: PandaButton(
-                          text: "",
-                          icon: Icons.arrow_forward_rounded,
-                          onPressed: widget.onSkip ?? () {},
+                          text: "START EXERCISE",
+                          onPressed: widget.onStartQuiz,
                           disabled: _isTutorialShowing,
-                          backgroundColor: Colors.white,
-                          textColor: AppColors.pandaBlack,
+                          icon: Icons.pets,
                           borderColor: Colors.black,
-                          width: 60,
-                          height: 60,
+                          shadowColor: const Color.fromARGB(255, 38, 38, 38),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Skip Button
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Container(
+                      key: _nextButtonKey,
+                      child: PandaButton(
+                        text: "",
+                        icon: Icons.arrow_forward_rounded,
+                        onPressed: widget.onSkip ?? () {},
+                        disabled: _isTutorialShowing,
+                        backgroundColor: Colors.white,
+                        textColor: AppColors.pandaBlack,
+                        borderColor: Colors.black,
+                        width: 60,
+                        height: 60,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -863,26 +826,24 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return PointerInterceptor(
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Ready to Practice? 🐼",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Ready to Practice? 🐼",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 10),
-                    Text(
-                      "Tap here to start a quick quiz based on this video.",
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Tap here to start a quick quiz based on this video.",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
               );
             },
           ),
@@ -903,26 +864,24 @@ class _VideoPostState extends ConsumerState<VideoPost> {
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return PointerInterceptor(
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Not interested? ⏭️",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Not interested? ⏭️",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 10),
-                    Text(
-                      "Tap here or swipe up to go to the next video.",
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Tap here or swipe up to go to the next video.",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
               );
             },
           ),

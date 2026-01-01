@@ -7,6 +7,7 @@ trigger: always_on
 ## 1. Design Philosophy (The "Vibe")
 All UI generated for this project must target the **Student Demographic**.
 - **Playful & Rounded:** Avoid sharp 90-degree corners. Use `BorderRadius.circular(16)` or higher as the default.
+- neo-brutalist design
 - **High Energy:** Use "Dopamine Design" principles. Buttons should feel tactile (bouncy).
 - **Gamified Aesthetics:** Use card-based layouts (Bento Grid style), progress bars, and badges.
 - **Whitespace:** Generous padding. Don't crowd the screen.

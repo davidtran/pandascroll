@@ -12,6 +12,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../data/flashcards_repository.dart';
 import '../../domain/models/flashcard_model.dart';
 import 'package:pandascroll/src/features/profile/presentation/providers/profile_providers.dart';
+import '../widgets/flashcards_progress_bar.dart';
 // Removed google_fonts import
 
 enum CardRating { hard, good, easy }
@@ -152,8 +153,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
               color: Colors.black,
             ),
           ),
-          backgroundColor: Colors.white,
-          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.amberAccent,
           duration: const Duration(milliseconds: 1500),
         ),
       );
@@ -172,13 +172,10 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
           );
     } catch (e) {
       debugPrint("Error updating flashcard: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _reviewQueue.removeWhere((c) => c.id == card.id);
-        });
-      }
     }
+    // FIX: Do NOT remove from list. This causes index shifting issues with CardSwiper.
+    // The swiper automatically moves to the next index.
+    // We just track progress via _currentIndex.
   }
 
   void _flipCard(int index) {
@@ -245,6 +242,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
     const softGreen = Color(0xFFE0FBE6);
 
     if (_reviewQueue.isEmpty) {
+      // If we have no due cards, check if we have ANY cards at all.
       if (_totalCards == 0) {
         return Scaffold(
           backgroundColor: Colors.black,
@@ -274,7 +272,8 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
         );
       }
 
-      return const Scaffold(
+      // Otherwise, we have cards, just none due.
+      return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
           child: Column(
@@ -298,7 +297,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
               ),
               SizedBox(height: 8),
               Text(
-                "the words in this stack will reappear later.",
+                "no cards due right now.",
                 textAlign: .center,
                 style: TextStyle(
                   color: Colors.white54,
@@ -359,10 +358,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
               children: [
                 // Minimal Header (removed buttons as requested)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.only(top: 16.0),
                   child: Center(
                     child: Column(
                       children: [
@@ -376,16 +372,12 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                             color: Colors.white60,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "tap to flip",
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white38,
+                        // Add Progress Bar
+                        if (!_isEnded)
+                          FlashcardsProgressBar(
+                            currentIndex: _currentIndex,
+                            total: _reviewQueue.length,
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -426,9 +418,11 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                       cardsCount: _reviewQueue.length,
                       isLoop: false,
                       onSwipe: (previousIndex, currentIndex, direction) {
-                        if (currentIndex != null) {
-                          _currentIndex = currentIndex;
-                        }
+                        setState(() {
+                          if (currentIndex != null) {
+                            _currentIndex = currentIndex;
+                          }
+                        });
 
                         // Map direction to rating
                         CardRating? rating;
@@ -525,8 +519,9 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                                             card,
                                             pandaWhite,
                                             pandaBlack,
-                                            primaryGreen,
-                                            softGreen,
+                                            AppColors.cardSecondaryShadow
+                                                .withOpacity(0.2),
+                                            AppColors.cardSecondaryShadow,
                                           )
                                         : _buildFrontCard(
                                             card,
@@ -627,14 +622,24 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FloatingActionButton(
-          heroTag: label,
-          onPressed: onTap,
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          child: icon,
-          mini: true,
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.5),
+                  offset: const Offset(0, 4),
+                  blurRadius: 0,
+                ),
+              ],
+            ),
+            child: Center(child: icon),
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -829,7 +834,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: soft.withOpacity(0.5),
+                  color: soft.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: primary.withOpacity(0.1)),
                 ),

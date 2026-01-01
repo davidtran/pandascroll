@@ -9,6 +9,7 @@ class AppColors {
     0xFF16A34A,
   ); // Darker Green for borders/shadows
   static const Color bambooLight = Color(0xFFBBF7D0);
+  static const Color premiumBrand = Color(0xFF13EC80); // Neon Green for Premium
 
   // Theme Colors
   static const Color background = Color(
@@ -20,6 +21,7 @@ class AppColors {
   // Text Colors
   static const Color textMain = Color(0xFF102219); // Panda Black
   static const Color textLight = Color(0xFF6B7280);
+  static const Color cardSecondaryShadow = Color.fromARGB(255, 188, 189, 190);
 
   // Accents
   static const Color accent = Color(0xFFFF9F1C); // Cheerful Orange

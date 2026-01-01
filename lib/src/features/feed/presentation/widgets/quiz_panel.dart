@@ -593,7 +593,10 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
             // 2. Content Area
             Expanded(child: _buildBodyContent()),
 
-            if (!_isCompleted && _lives > 0 && !_isLoading)
+            if (!_isCompleted &&
+                _lives > 0 &&
+                !_isLoading &&
+                _exercises.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 0),
                 child: Row(
@@ -696,13 +699,29 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
               },
               child: const Text("Retry"),
             ),
+            TextButton(
+              onPressed: widget.onClose,
+              child: const Text("Close", style: TextStyle(color: Colors.grey)),
+            ),
           ],
         ),
       );
     }
 
     if (_exercises.isEmpty) {
-      return const Center(child: Text("No exercises found"));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("No exercise found"),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: widget.onClose,
+              child: const Text("Close", style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ),
+      );
     }
 
     if (_preparationData != null && !_isPreparationCompleted) {

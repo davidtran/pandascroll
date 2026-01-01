@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../subscription/presentation/views/upgrade_view.dart';
 import '../../../../core/theme/app_colors.dart';
+
+// ... (existing imports)
+
 import '../../../../core/theme/app_dimens.dart';
 import '../controllers/video_controller.dart';
 import '../../data/video_status_repository.dart';
@@ -200,6 +204,13 @@ class _VideoPageFeed extends ConsumerWidget {
       // Use allowImplicitScrolling to keep previous/next video ready in memory
       allowImplicitScrolling: true,
       onPageChanged: (index) {
+        // Trigger Upgrade View on scroll
+        final prevIndex = ref.read(videoFeedProvider).currentIndex;
+        if (index > prevIndex) {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (context) => const UpgradeView()));
+        }
         ref.read(videoFeedProvider.notifier).onPageChanged(index);
       },
       itemBuilder: (context, index) {
@@ -207,27 +218,33 @@ class _VideoPageFeed extends ConsumerWidget {
           video: videos[index],
           isPlaying: index == currentIndex && !isPanelOpen && isFeedTabActive,
           hideContent: isPanelOpen,
-          onStartQuiz: () => onOpenPanel(
-            "Loading...",
-            QuizPanel(
-              videoId: videos[index].id,
-              audioUrl: videos[index].audioUrl,
-              onTitleChanged: onUpdateTitle,
-              onClose: () => onClosePanel(),
-              language: videos[index].language,
-              onNextVideo: () {
-                onClosePanel();
-                if (index < videos.length - 1) {
-                  pageController.animateToPage(
-                    index + 1,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-            ),
-            barrierDismissible: false,
-          ),
+          onStartQuiz: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const UpgradeView()),
+            );
+
+            onOpenPanel(
+              "Loading...",
+              QuizPanel(
+                videoId: videos[index].id,
+                audioUrl: videos[index].audioUrl,
+                onTitleChanged: onUpdateTitle,
+                onClose: () => onClosePanel(),
+                language: videos[index].language,
+                onNextVideo: () {
+                  onClosePanel();
+                  if (index < videos.length - 1) {
+                    pageController.animateToPage(
+                      index + 1,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+              ),
+              barrierDismissible: false,
+            );
+          },
           onShowComments: () => onOpenPanel(
             "Comments 💬",
             CommentsPanel(videoId: videos[index].id),

@@ -39,7 +39,16 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
     widget.seekStream?.listen((seconds) async {
       if (!mounted) return;
       final currentPos = await _controller.currentTime;
-      _controller.seekTo(seconds: currentPos + seconds);
+      _controller.seekTo(seconds: currentPos + seconds, allowSeekAhead: true);
+      // Wait a bit and force play if it was playing, to prevent pausing
+      if (widget.isPlaying) {
+        // Small delay to let the seek command process
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (mounted && widget.isPlaying) {
+            _controller.playVideo();
+          }
+        });
+      }
     });
   }
 

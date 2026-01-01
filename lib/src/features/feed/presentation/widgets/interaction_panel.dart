@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pandascroll/src/features/feed/presentation/widgets/with_interceptor.dart';
+import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../../core/theme/app_dimens.dart';
 
@@ -46,10 +48,12 @@ class InteractionPanelWidget extends State<InteractionPanel> {
           // Barrier
           if (widget.isVisible)
             Positioned.fill(
-              child: GestureDetector(
-                onTap: widget.barrierDismissible ? handleClose : null,
-                behavior: HitTestBehavior.opaque,
-                child: Container(color: Colors.black),
+              child: withInterceptor(
+                GestureDetector(
+                  onTap: widget.barrierDismissible ? handleClose : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(color: Colors.black.withOpacity(0.6)),
+                ),
               ),
             ),
 
@@ -71,11 +75,21 @@ class InteractionPanelWidget extends State<InteractionPanel> {
   // Moved existing content logic to a new private method
   Widget _buildPanelContent() {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.card),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        border: const Border(
+          top: BorderSide(color: AppColors.pandaBlack, width: 3),
+          left: BorderSide(color: AppColors.pandaBlack, width: 3),
+          right: BorderSide(color: AppColors.pandaBlack, width: 3),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.pandaBlack.withOpacity(0.4),
+            offset: const Offset(0, -4),
+            blurRadius: 0, // Hard shadow for depth but upwards
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -90,14 +104,17 @@ class InteractionPanelWidget extends State<InteractionPanel> {
             behavior: HitTestBehavior.translucent,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Container(
-                  width: 40,
-                  height: 4,
+                  width: 60,
+                  height: 6,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+                    color: AppColors.pandaBlack.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(
+                      color: AppColors.pandaBlack.withOpacity(0.1),
+                    ),
                   ),
                 ),
               ),

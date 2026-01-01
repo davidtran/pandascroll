@@ -9,6 +9,7 @@ class SelectablePlanCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final bool isBestValue;
+  final String? trial;
 
   const SelectablePlanCard({
     super.key,
@@ -19,6 +20,7 @@ class SelectablePlanCard extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     this.isBestValue = false,
+    this.trial,
   });
 
   @override
@@ -58,6 +60,7 @@ class SelectablePlanCard extends StatelessWidget {
                     ],
             ),
             child: Stack(
+              alignment: Alignment.center,
               children: [
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -85,7 +88,7 @@ class SelectablePlanCard extends StatelessWidget {
                           TextSpan(
                             text: price,
                             style: const TextStyle(
-                              fontSize: 32,
+                              fontSize: 28,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -113,6 +116,28 @@ class SelectablePlanCard extends StatelessWidget {
                         ),
                         child: Text(
                           subtitle!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Nunito',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (trial != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.pandaBlack,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '7 days free trial',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

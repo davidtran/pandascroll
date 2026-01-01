@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../subscription/presentation/views/upgrade_view.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'package:pandascroll/src/features/subscription/presentation/providers/subscription_provider.dart';
 
 // ... (existing imports)
 
@@ -196,6 +197,9 @@ class _VideoPageFeed extends ConsumerWidget {
     final mainNavIndex = ref.watch(mainNavigationIndexProvider);
     final isFeedTabActive = mainNavIndex == 0;
 
+    final subscriptionState = ref.watch(subscriptionProvider);
+    final isPro = subscriptionState.value?.isPro ?? false;
+
     return PageView.builder(
       controller: pageController,
       scrollDirection: Axis.vertical,
@@ -206,7 +210,7 @@ class _VideoPageFeed extends ConsumerWidget {
       onPageChanged: (index) {
         // Trigger Upgrade View on scroll
         final prevIndex = ref.read(videoFeedProvider).currentIndex;
-        if (index > prevIndex) {
+        if (index > prevIndex && !isPro) {
           Navigator.of(
             context,
           ).push(MaterialPageRoute(builder: (context) => const UpgradeView()));
@@ -219,9 +223,11 @@ class _VideoPageFeed extends ConsumerWidget {
           isPlaying: index == currentIndex && !isPanelOpen && isFeedTabActive,
           hideContent: isPanelOpen,
           onStartQuiz: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const UpgradeView()),
-            );
+            if (!isPro) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const UpgradeView()),
+              );
+            }
 
             onOpenPanel(
               "Loading...",

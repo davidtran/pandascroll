@@ -1,5 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:pandascroll/src/features/subscription/presentation/providers/subscription_provider.dart';
+
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/subscription/presentation/widgets/upgrade_header.dart';
 import 'package:pandascroll/src/features/subscription/presentation/widgets/selectable_plan_card.dart';
@@ -8,18 +12,64 @@ import 'package:pandascroll/src/features/subscription/presentation/widgets/upgra
 import 'package:pandascroll/src/features/subscription/presentation/widgets/upgrade_bottom_bar.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
-class UpgradeView extends StatefulWidget {
+class UpgradeView extends ConsumerStatefulWidget {
   const UpgradeView({super.key});
 
   @override
-  State<UpgradeView> createState() => _UpgradeViewState();
+  ConsumerState<UpgradeView> createState() => _UpgradeViewState();
 }
 
-class _UpgradeViewState extends State<UpgradeView> {
-  String _selectedPlan = 'yearly';
+class _UpgradeViewState extends ConsumerState<UpgradeView> {
+  Package? _selectedPackage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch offerings is handled by the provider's build method
+  }
+
+  String _formatTrial(IntroductoryPrice? price) {
+    if (price == null) return '';
+    final unit = price.periodUnit;
+    final count = price.periodNumberOfUnits;
+    String unitStr = '';
+    switch (unit) {
+      case PeriodUnit.day:
+        unitStr = 'd';
+        break;
+      case PeriodUnit.week:
+        unitStr = 'w';
+        break;
+      case PeriodUnit.month:
+        unitStr = 'm';
+        break;
+      case PeriodUnit.year:
+        unitStr = 'y';
+        break;
+      case PeriodUnit.unknown:
+        unitStr = '';
+        break;
+    }
+    return '$count$unitStr';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final subscriptionState = ref.watch(subscriptionProvider);
+
+    // Select default package if not set
+    if (_selectedPackage == null &&
+        subscriptionState.value?.offerings?.current != null) {
+      final currentOffering = subscriptionState.value!.offerings!.current!;
+      if (currentOffering.annual != null) {
+        _selectedPackage = currentOffering.annual;
+      } else if (currentOffering.monthly != null) {
+        _selectedPackage = currentOffering.monthly;
+      }
+    }
+
+    final currentOffering = subscriptionState.value?.offerings?.current;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -80,8 +130,10 @@ class _UpgradeViewState extends State<UpgradeView> {
                         color: AppColors.pandaBlack,
                       ),
                       TextButton(
-                        onPressed: () {
-                          // Restore purchase logic
+                        onPressed: () async {
+                          await ref
+                              .read(subscriptionProvider.notifier)
+                              .restorePurchases();
                         },
                         child: const Text(
                           "Restore",
@@ -128,33 +180,67 @@ class _UpgradeViewState extends State<UpgradeView> {
                           ),
                           const SizedBox(height: 24),
 
-                          Row(
-                            children: [
-                              Expanded(
-                                child: SelectablePlanCard(
-                                  title: "Monthly",
-                                  price: "\$9",
-                                  period: "mo",
-                                  isSelected: _selectedPlan == 'monthly',
-                                  onTap: () =>
-                                      setState(() => _selectedPlan = 'monthly'),
-                                ),
-                              ),
-                              const SizedBox(width: 24),
-                              Expanded(
-                                child: SelectablePlanCard(
-                                  title: "Yearly",
-                                  price: "\$59",
-                                  period: "yr",
-
-                                  isBestValue: true,
-                                  isSelected: _selectedPlan == 'yearly',
-                                  onTap: () =>
-                                      setState(() => _selectedPlan = 'yearly'),
-                                ),
-                              ),
-                            ],
-                          ),
+                          if (subscriptionState.isLoading)
+                            const Center(child: CircularProgressIndicator())
+                          else if (currentOffering != null)
+                            Row(
+                              children: [
+                                if (currentOffering.monthly != null)
+                                  Expanded(
+                                    child: SelectablePlanCard(
+                                      title: "Monthly",
+                                      price: currentOffering
+                                          .monthly!
+                                          .storeProduct
+                                          .priceString,
+                                      period: "mo",
+                                      trial: _formatTrial(
+                                        currentOffering
+                                            .monthly!
+                                            .storeProduct
+                                            .introductoryPrice,
+                                      ),
+                                      isSelected:
+                                          _selectedPackage ==
+                                          currentOffering.monthly,
+                                      onTap: () => setState(
+                                        () => _selectedPackage =
+                                            currentOffering.monthly,
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(width: 24),
+                                if (currentOffering.annual != null)
+                                  Expanded(
+                                    child: SelectablePlanCard(
+                                      title: "Yearly",
+                                      price: currentOffering
+                                          .annual!
+                                          .storeProduct
+                                          .priceString,
+                                      period: "yr",
+                                      trial: _formatTrial(
+                                        currentOffering
+                                            .annual!
+                                            .storeProduct
+                                            .introductoryPrice,
+                                      ),
+                                      isBestValue: true,
+                                      isSelected:
+                                          _selectedPackage ==
+                                          currentOffering.annual,
+                                      onTap: () => setState(
+                                        () => _selectedPackage =
+                                            currentOffering.annual,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            )
+                          else
+                            const Center(
+                              child: Text('Unable to fetch offerings'),
+                            ),
 
                           const SizedBox(height: 32),
 
@@ -178,10 +264,13 @@ class _UpgradeViewState extends State<UpgradeView> {
             left: 0,
             right: 0,
             child: UpgradeBottomBar(
-              selectedPlan: _selectedPlan,
-              onTap: () {
-                // TODO: Implement purchase logic
-                debugPrint("Upgrading to $_selectedPlan");
+              selectedPackage: _selectedPackage,
+              onTap: () async {
+                if (_selectedPackage != null) {
+                  await ref
+                      .read(subscriptionProvider.notifier)
+                      .purchasePackage(_selectedPackage!);
+                }
               },
             ),
           ),

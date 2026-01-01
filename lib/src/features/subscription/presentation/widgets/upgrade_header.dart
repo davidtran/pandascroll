@@ -15,19 +15,6 @@ class UpgradeHeader extends ConsumerWidget {
     final langName = LanguageUtils.getLanguageName(targetLang);
     return Column(
       children: [
-        // Background Blobs (Optional - simplified for Flutter)
-        // In a real implementation we might use positioned elements in the global Stack,
-        // but for this widget we'll focus on the text content.
-        Text(
-          "Pricing".toUpperCase(),
-          style: const TextStyle(
-            color: AppColors.primaryBrand,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-            fontSize: 14,
-            fontFamily: 'Nunito',
-          ),
-        ),
         const SizedBox(height: 8),
         RichText(
           textAlign: TextAlign.center,

@@ -14,7 +14,6 @@ class VideoModel {
   final String audioUrl;
   final String text;
   final List<Caption> captions;
-  final List<String> translations;
 
   VideoModel({
     required this.id,
@@ -32,7 +31,6 @@ class VideoModel {
     required this.audioUrl,
     required this.text,
     required this.captions,
-    required this.translations,
   });
 
   factory VideoModel.fromJson(Map<String, dynamic> json) {
@@ -54,7 +52,6 @@ class VideoModel {
       captions: (json['captions'] as List)
           .map((e) => Caption.fromJson(e as Map<String, dynamic>))
           .toList(),
-      translations: (json['translations'] as List).cast<String>(),
     );
   }
 }

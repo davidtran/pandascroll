@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pandascroll/src/core/theme/app_colors.dart';
 
-class CustomYouTubePlayerMobile extends StatefulWidget {
+class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
   final String videoId;
   final bool isPlaying;
   final Function(double) onCurrentTime;
@@ -24,13 +26,15 @@ class CustomYouTubePlayerMobile extends StatefulWidget {
   });
 
   @override
-  State<CustomYouTubePlayerMobile> createState() =>
+  ConsumerState<CustomYouTubePlayerMobile> createState() =>
       _CustomYouTubePlayerMobileState();
 }
 
-class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
+class _CustomYouTubePlayerMobileState
+    extends ConsumerState<CustomYouTubePlayerMobile> {
   InAppWebViewController? _webViewController;
   bool _isPlayerReady = false;
+  // Use a local variable to control visual visibility, but override with provider loading
   bool _isThumbnailVisible = true;
   StreamSubscription? _seekSubscription;
 
@@ -65,6 +69,7 @@ class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
 
     if (widget.videoId != oldWidget.videoId) {
       _loadVideo(widget.videoId);
+      _isThumbnailVisible = true; // Reset thumbnail on video change
     }
 
     if (widget.isPlaying != oldWidget.isPlaying) {
@@ -246,8 +251,11 @@ class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
                       _isPlayerReady = true;
                     });
                   }
+                  // Only play if ready
                   if (widget.isPlaying) {
                     _play();
+                  } else {
+                    _pause();
                   }
                 },
               )
@@ -258,15 +266,20 @@ class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
                   switch (state) {
                     case 0:
                       widget.onEnded();
-                      _play(); // Loop forever
+                      // Only loop if ready
+                      _play();
                       break;
                     case 1:
                       widget.onStateChange(true);
+                      // Start playing
+                      // Hide thumbnail on first play
                       if (mounted) {
+                        // Only remove thumbnail if not forced loading
                         setState(() {
                           _isThumbnailVisible = false;
                         });
                       }
+
                       break;
                     case 2:
                       widget.onStateChange(false);
@@ -292,19 +305,25 @@ class _CustomYouTubePlayerMobileState extends State<CustomYouTubePlayerMobile> {
               );
           },
         ),
+        // Cover loading states (either player init OR translation loading)
         if (_isThumbnailVisible)
           Positioned.fill(
             child: Stack(
               fit: StackFit.expand,
               children: [
+                // If thumbnail is still valid (player not started), show it. Use black if not.
                 Image.network(
                   'https://img.youtube.com/vi/${widget.videoId}/sddefault.jpg',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
                       Container(color: Colors.black),
                 ),
-                ColoredBox(color: Colors.black.withOpacity(0.3)),
-                const Center(child: CircularProgressIndicator()),
+                // Loader
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryBrand,
+                  ),
+                ),
               ],
             ),
           ),

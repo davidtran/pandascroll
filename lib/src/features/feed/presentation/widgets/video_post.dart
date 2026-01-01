@@ -9,9 +9,11 @@ import '../../../profile/presentation/views/profile_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
+import '../providers/video_translations_provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../subscription/presentation/views/upgrade_view.dart';
+import 'package:pandascroll/src/features/subscription/presentation/providers/subscription_provider.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/providers/settings_provider.dart';
 
@@ -124,9 +126,12 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
     // TRIGGER UPGRADE VIEW
     if (mounted) {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const UpgradeView()));
+      final isPro = ref.read(subscriptionProvider).value?.isPro ?? false;
+      if (!isPro) {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const UpgradeView()));
+      }
     }
 
     try {
@@ -449,19 +454,27 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Captions Overlay
-                if (settings.captions)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: RepaintBoundary(
-                      child: CaptionsOverlay(
-                        key: _captionsKey,
-                        currentTimeNotifier: _currentTimeNotifier,
-                        captions: widget.video.captions,
-                        onWordTap: _handleWordTap,
-                        translations: widget.video.translations,
-                      ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: RepaintBoundary(
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final translationsAsync = ref.watch(
+                          videoTranslationsProvider(widget.video.id),
+                        );
+                        final translations = translationsAsync.value ?? [];
+
+                        return CaptionsOverlay(
+                          key: _captionsKey,
+                          currentTimeNotifier: _currentTimeNotifier,
+                          captions: widget.video.captions,
+                          onWordTap: _handleWordTap,
+                          translations: translations,
+                        );
+                      },
                     ),
                   ),
+                ),
 
                 // Title (Chinese)
                 if (widget.video.title.isNotEmpty)

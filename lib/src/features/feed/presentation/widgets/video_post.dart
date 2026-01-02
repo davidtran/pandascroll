@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/with_interceptor.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -32,6 +33,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'players/youtube_player.dart';
 import '../providers/stats_provider.dart';
 import '../../data/video_status_repository.dart';
+import 'video_feed_header.dart';
+import 'video_window_controls.dart';
 
 class VideoPost extends ConsumerStatefulWidget {
   final VideoModel video;
@@ -68,10 +71,15 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   bool _isMuted = false;
   bool _xpAwarded = false;
 
+  // Window/Chunk State
+  int _currentWindowIndex = 0;
+  double _windowStartTime = 0.0;
+  double _windowEndTime = 0.0;
+
   // Notifiers for UI updates
   final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
-  final StreamController<int> _seekController =
-      StreamController<int>.broadcast();
+  final StreamController<double> _seekController =
+      StreamController<double>.broadcast();
 
   // Tutorial Keys
   final GlobalKey _captionsKey = GlobalKey();
@@ -93,6 +101,8 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     if (route is ModalRoute<void>) {
       routeObserver.subscribe(this, route);
     }
+    // Initialize window calculation
+    _calculateWindowTimes();
   }
 
   @override
@@ -112,6 +122,21 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
   void _startTimer() {
     _stopTimer();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (_isPaused || !_isVideoLoaded) return;
+
+      final newTime = _currentTimeNotifier.value + 0.05;
+      // Simple clamp to prevent running past end if player doesn't stop us
+      if (newTime <= widget.video.durationSeconds) {
+        _currentTimeNotifier.value = newTime;
+      }
+
+      // Check window logic locally to trigger UI updates if needed
+      if (_windowEndTime > 0 && newTime >= _windowEndTime) {
+        // We don't auto-seek here as the player logic handles loops,
+        // but we ensure the bar fills up.
+      }
+    });
   }
 
   void _stopTimer() {
@@ -238,7 +263,61 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
       _isPaused = false;
       _xpAwarded = false;
       _isVideoLoaded = false;
+      _currentWindowIndex = 0;
+      _calculateWindowTimes();
     });
+  }
+
+  void _calculateWindowTimes() {
+    if (widget.video.captions.isEmpty) {
+      _windowStartTime = 0.0;
+      _windowEndTime = widget.video.durationSeconds.toDouble();
+      return;
+    }
+
+    if (_currentWindowIndex >= widget.video.captions.length) {
+      _currentWindowIndex = 0;
+    }
+
+    final window = widget.video.captions[_currentWindowIndex];
+    if (window.sentences.isNotEmpty &&
+        window.sentences.first.words.isNotEmpty) {
+      _windowStartTime = window.sentences.first.words.first.start;
+      // You might want a small buffer or exact end
+      _windowEndTime = window.sentences.last.words.last.end;
+
+      // Safety check
+      if (_windowEndTime <= _windowStartTime) {
+        _windowEndTime = _windowStartTime + 5.0; // Fallback
+      }
+    } else {
+      // Fallback if no words
+      _windowStartTime = 0.0;
+      _windowEndTime = widget.video.durationSeconds.toDouble();
+    }
+  }
+
+  void _nextWindow() {
+    if (_currentWindowIndex < widget.video.captions.length - 1) {
+      setState(() {
+        _currentWindowIndex++;
+        _calculateWindowTimes();
+      });
+      _seekController.add(_windowStartTime);
+    }
+  }
+
+  void _prevWindow() {
+    if (_currentWindowIndex > 0) {
+      setState(() {
+        _currentWindowIndex--;
+        _calculateWindowTimes();
+      });
+      _seekController.add(_windowStartTime);
+    } else {
+      // If at start, just seek to start
+      _seekController.add(_windowStartTime);
+    }
   }
 
   bool _isVideoLoaded = false;
@@ -408,28 +487,19 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                 ),
                 const SizedBox(height: 24),
 
-                // Like
+                // Save (Like)
                 _buildActionItem(
                   Icons.favorite_rounded,
-                  "12.5k",
+                  "Save",
                   Colors.white,
                   isLike: true,
+                  onTap: () {
+                    // Reference implementation logic for like/save
+                  },
                 ),
                 const SizedBox(height: 20),
 
-                _buildActionItem(
-                  Icons.chat_bubble_rounded,
-                  "342", // TODO: Real count
-                  Colors.white,
-                  onTap: () {
-                    widget.onShowPanel(
-                      "Comments 💬",
-                      CommentsPanel(videoId: widget.video.id),
-                    );
-                  },
-                  size: 24,
-                ),
-                const SizedBox(height: 20),
+                // Caption
                 _buildActionItem(
                   settings.captions
                       ? Icons.closed_caption
@@ -447,7 +517,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
         Positioned(
           left: 16,
           right: 80, // Space for actions
-          bottom: 80, // aligned with actions bottom
+          bottom: 70, // aligned with actions bottom
           child: withInterceptor(
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -462,53 +532,71 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                         final translationsAsync = ref.watch(
                           videoTranslationsProvider(widget.video.id),
                         );
-                        final translations = translationsAsync.value ?? [];
+                        final allTranslations = translationsAsync.value ?? [];
+
+                        // Calculate offset for current window
+                        int translationOffset = 0;
+                        for (int i = 0; i < _currentWindowIndex; i++) {
+                          if (i < widget.video.captions.length) {
+                            translationOffset +=
+                                widget.video.captions[i].sentences.length;
+                          }
+                        }
+
+                        final currentWindowSentences =
+                            widget.video.captions.isNotEmpty
+                            ? widget
+                                  .video
+                                  .captions[_currentWindowIndex]
+                                  .sentences
+                            : <Caption>[]; // Fix type inference
+
+                        final windowTranslations =
+                            (translationOffset < allTranslations.length)
+                            ? allTranslations
+                                  .skip(translationOffset)
+                                  .take(currentWindowSentences.length)
+                                  .toList()
+                            : <String>[];
 
                         return CaptionsOverlay(
                           key: _captionsKey,
                           currentTimeNotifier: _currentTimeNotifier,
-                          captions: widget.video.captions,
+                          captions: currentWindowSentences,
                           onWordTap: _handleWordTap,
-                          translations: translations,
+                          translations: windowTranslations,
                         );
                       },
                     ),
                   ),
                 ),
-
-                // Title (Chinese)
-                if (widget.video.title.isNotEmpty)
-                  Text(
-                    widget.video.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w100,
-                      height: 1.1,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // Play Controls
-                if (widget.video.platformType.toLowerCase() == 'youtube')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
-                    child: PlayControls(
-                      isPlaying: effectiveIsPlaying,
-                      onPlayPause: _togglePlayPause,
-                      onRewind: () => _seekController.add(-5),
-                      onForward: () => _seekController.add(5),
-                    ),
-                  ),
               ],
             ),
           ),
+        ),
+
+        // Window Title & Navigation (Top/Center)
+        Positioned(
+          top: 60,
+          left: 0,
+          right: 0,
+          child: widget.video.captions.isNotEmpty
+              ? VideoWindowControls(
+                  videoTitle: widget.video.title,
+                  currentChunkTitle:
+                      widget.video.captions[_currentWindowIndex].title,
+                  currentChunkIndex: _currentWindowIndex,
+                  totalChunks: widget.video.captions.length,
+                  hasPrev: _currentWindowIndex > 0,
+                  hasNext:
+                      _currentWindowIndex < widget.video.captions.length - 1,
+                  onPrev: _prevWindow,
+                  onNext: _nextWindow,
+                  currentTimeNotifier: _currentTimeNotifier,
+                  chunkStartTime: _windowStartTime,
+                  chunkEndTime: _windowEndTime,
+                )
+              : const SizedBox.shrink(),
         ),
 
         // 4. Start Exercise Button + Skip Button (Bottom Fixed)
@@ -519,50 +607,46 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: widget.hideContent ? 0.0 : 1.0,
-            child: IgnorePointer(
-              ignoring: widget.hideContent,
-              child: withInterceptor(
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 60,
-                        child: Container(
-                          key: _startExerciseKey,
-                          child: PandaButton(
-                            text: "START EXERCISE",
-                            onPressed: widget.onStartQuiz,
-                            disabled: _isTutorialShowing,
-                            icon: Icons.pets,
-                            borderColor: Colors.black,
-                            shadowColor: const Color.fromARGB(255, 38, 38, 38),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Skip Button
-                    SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: Container(
-                        key: _nextButtonKey,
-                        child: PandaButton(
-                          text: "",
-                          icon: Icons.arrow_forward_rounded,
-                          onPressed: widget.onSkip ?? () {},
-                          disabled: _isTutorialShowing,
-                          backgroundColor: Colors.white,
-                          textColor: AppColors.pandaBlack,
-                          borderColor: Colors.black,
-                          width: 60,
-                          height: 60,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            child: PandaButton(
+              text: "START QUIZ",
+              onPressed: !_xpAwarded ? () {} : widget.onStartQuiz,
+              disabled: _isTutorialShowing || !_xpAwarded,
+              backgroundColor: !_xpAwarded
+                  ? Colors.grey[300]!
+                  : AppColors.bambooGreen,
+              textColor: AppColors.pandaBlack.withOpacity(
+                !_xpAwarded ? 0.5 : 1.0,
               ),
+              borderColor: AppColors.pandaBlack,
+              icon: null, // We use leading/trailing manually or just leading
+              height: 50,
+              leading: Icon(
+                Icons.quiz,
+                color: AppColors.pandaBlack.withOpacity(
+                  !_xpAwarded ? 0.5 : 1.0,
+                ),
+                size: 28,
+              ),
+              trailing: !_xpAwarded
+                  ? Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.pandaBlack,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.lock,
+                        size: 18,
+                        color: AppColors.pandaBlack,
+                      ),
+                    )
+                  : null,
+              shadowColor: const Color.fromARGB(255, 38, 38, 38),
             ),
           ),
         ),
@@ -641,6 +725,13 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
         _isVideoLoaded = true;
       });
     }
+
+    // Loop logic for Window
+    // Add small buffer to avoid infinite seek loop at exact boundary?
+    // Or just check strictly.
+    if (_windowEndTime > 0 && time >= _windowEndTime) {
+      _seekController.add(_windowStartTime);
+    }
   }
 
   Widget _buildPlayer(bool isPlaying) {
@@ -672,6 +763,45 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
       },
       onStateChange: _onPlayerStateChange,
       onEnded: _onPlayerEnded,
+      seekStream: _seekController.stream,
+    );
+  }
+
+  Widget _buildNavButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    bool isEnabled = true,
+    bool isPrimary = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44, // w-10 approx
+        height: 44,
+        decoration: BoxDecoration(
+          color: isPrimary
+              ? AppColors.bambooGreen.withOpacity(isEnabled ? 0.9 : 0.6)
+              : Colors.white.withOpacity(isEnabled ? 0.2 : 0.1),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isPrimary
+                ? AppColors.bambooLight.withOpacity(0.5)
+                : Colors.white.withOpacity(0.3),
+            width: 2,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, 4),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Center(child: Icon(icon, color: Colors.white, size: 24)),
+        ),
+      ),
     );
   }
 
@@ -681,30 +811,36 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     Color color, {
     bool isLike = false,
     VoidCallback? onTap,
-    double size = 32,
+    double size = 28, // Reduced slightly
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.translucent,
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: size,
-              color: isLike ? Colors.red : color,
-              shadows: [
-                const Shadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(50),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                width: 48, // w-11 approx
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      offset: Offset(0, 4),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
-              ],
+                child: Center(
+                  child: Icon(icon, color: Colors.white, size: size),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -712,7 +848,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               shadows: [
                 Shadow(
@@ -755,15 +891,20 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     bool hasCaption = false;
 
     // Check if any caption is currently active
-    for (final caption in widget.video.captions) {
-      if (caption.words.isNotEmpty) {
-        final start = caption.words.first.start;
-        final end = caption.words.last.end;
-        if (currentTime >= start && currentTime <= end) {
-          hasCaption = true;
-          break;
+    // Flatten all windows for tutorial check? Or just check current window?
+    // Tutorial likely wants to catch ANY caption.
+    for (final window in widget.video.captions) {
+      for (final caption in window.sentences) {
+        if (caption.words.isNotEmpty) {
+          final start = caption.words.first.start;
+          final end = caption.words.last.end;
+          if (currentTime >= start && currentTime <= end) {
+            hasCaption = true;
+            break;
+          }
         }
       }
+      if (hasCaption) break;
     }
 
     if (hasCaption) {

@@ -146,17 +146,25 @@ class _CaptionContainerState extends State<_CaptionContainer> {
 
   @override
   Widget build(BuildContext context) {
-    final shape = ContinuousRectangleBorder(
-      borderRadius: BorderRadius.circular(32),
-    );
-
-    return ClipPath(
-      clipper: ShapeBorderClipper(shape: shape),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 5),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: Colors.black54,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Main Container
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.pandaBlack, width: 3),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.pandaBlack,
+                offset: Offset(4, 6),
+                blurRadius: 0,
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,28 +176,67 @@ class _CaptionContainerState extends State<_CaptionContainer> {
                   return _HighlightableWord(
                     word: entry.value,
                     index: entry.key,
-                    // Pass the low-frequency notifier
                     activeWordIndexNotifier: _activeWordIndexNotifier,
                     onTap: () => widget.onWordTap(entry.value.word),
                   );
                 }).toList(),
               ),
-              if (widget.translation.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    widget.translation,
-                    style: const TextStyle(
-                      color: Colors.white30,
-                      fontSize: 18,
-                      fontWeight: FontWeight.normal,
-                    ),
+              if (widget.translation.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(1),
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.translation,
+                  style:
+                      const TextStyle(
+                        color: AppColors
+                            .textMain, // was bambooDark, now textMain or per design
+                        fontFamily: 'Nunito', // Body font
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontStyle: FontStyle.italic,
+                      ).copyWith(
+                        color: AppColors.bambooDark,
+                      ), // Used bambooDark in HTML ref
+                ),
+              ],
             ],
           ),
         ),
-      ),
+
+        // Badge
+        Positioned(
+          top: -12,
+          left: -8,
+          child: Transform.rotate(
+            angle: -0.1, // approx -6 degrees
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors
+                    .bambooGreen, // Or accent orange from HTML example used orange, but let's stick to bamboo green or accent
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.pandaBlack, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    offset: Offset(0, 2),
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.translate, color: Colors.white, size: 16),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -215,16 +262,18 @@ class _HighlightableWord extends StatelessWidget {
       child: ValueListenableBuilder<int>(
         valueListenable: activeWordIndexNotifier,
         builder: (context, activeIndex, _) {
-          // This builder now only runs ~2 times per second
-          // (only when the active word actually flips).
           final isHighlighted = index == activeIndex;
 
           return Text(
             word.word,
             style: TextStyle(
-              color: isHighlighted ? AppColors.bambooDark : Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+              color: isHighlighted
+                  ? AppColors.bambooDark
+                  : AppColors.pandaBlack,
+              fontFamily: 'Fredoka', // Display font
+              fontSize: 16, // roughly text-lg/xl
+              fontWeight: FontWeight.bold,
+              height: 1.1,
             ),
           );
         },

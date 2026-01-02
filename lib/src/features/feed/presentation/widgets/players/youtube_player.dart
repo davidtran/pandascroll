@@ -27,7 +27,7 @@ class YouTubePlayer extends StatelessWidget {
     this.seekStream,
   });
 
-  final Stream<int>? seekStream;
+  final Stream<double>? seekStream;
 
   @override
   Widget build(BuildContext context) {

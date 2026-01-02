@@ -11,7 +11,7 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
   final Function(double) onCurrentTime;
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
-  final Stream<int>? seekStream;
+  final Stream<double>? seekStream;
   final Function(String error)? onError;
 
   const CustomYouTubePlayerMobile({
@@ -43,23 +43,14 @@ class _CustomYouTubePlayerMobileState
     super.initState();
     _seekSubscription = widget.seekStream?.listen((seconds) {
       if (_isPlayerReady && mounted) {
-        _seekRelative(seconds);
+        _seekTo(seconds);
       }
     });
   }
 
-  void _seekRelative(int seconds) async {
+  void _seekTo(double seconds) async {
     if (_webViewController != null) {
-      final currentTime = await _webViewController?.evaluateJavascript(
-        source: "player.getCurrentTime()",
-      );
-      if (currentTime != null) {
-        final double current = (currentTime is int)
-            ? currentTime.toDouble()
-            : currentTime;
-        final newPos = current + seconds;
-        _webViewController?.evaluateJavascript(source: "seekTo($newPos, true)");
-      }
+      _webViewController?.evaluateJavascript(source: "seekTo($seconds, true)");
     }
   }
 

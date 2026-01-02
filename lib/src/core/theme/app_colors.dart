@@ -27,6 +27,13 @@ class AppColors {
   static const Color accent = Color(0xFFFF9F1C); // Cheerful Orange
   static const Color accentFun = Color(0xFFFFD336); // Yellow
   static const Color accentYellow = Color(0xFFFDE047);
+  static const Color accentOrange = Color(
+    0xFFFB923C,
+  ); // Orange for fire/accents
+
+  // Level Colors
+  static const Color levelBlue = Color(0xFF3B82F6);
+  static const Color levelBlueLight = Color(0xFF60A5FA);
 
   // Specifics
   static const Color pandaBlack = Color(0xFF2D2D2D); // Deep dark green/black

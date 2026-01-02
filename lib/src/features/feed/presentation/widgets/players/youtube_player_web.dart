@@ -8,7 +8,7 @@ class YouTubePlayerWeb extends StatefulWidget {
   final Function(double) onCurrentTime;
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
-  final Stream<int>? seekStream;
+  final Stream<double>? seekStream;
   final Function(String error)? onError;
 
   const YouTubePlayerWeb({
@@ -38,8 +38,7 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
     _initializeController();
     widget.seekStream?.listen((seconds) async {
       if (!mounted) return;
-      final currentPos = await _controller.currentTime;
-      _controller.seekTo(seconds: currentPos + seconds, allowSeekAhead: true);
+      _controller.seekTo(seconds: seconds, allowSeekAhead: true);
       // Wait a bit and force play if it was playing, to prevent pausing
       if (widget.isPlaying) {
         // Small delay to let the seek command process

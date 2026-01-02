@@ -14,6 +14,7 @@ class PandaButton extends StatefulWidget {
   final Color? shadowColor;
   final double? width;
   final Widget? leading;
+  final Widget? trailing;
   final bool disabled;
   final Offset shadowOffset;
 
@@ -31,6 +32,7 @@ class PandaButton extends StatefulWidget {
     this.shadowColor,
     this.width = double.infinity,
     this.leading,
+    this.trailing,
     this.disabled = false,
     this.shadowOffset = const Offset(0, 4),
   });
@@ -59,6 +61,7 @@ class _PandaButtonState extends State<PandaButton> {
         duration: const Duration(milliseconds: 100),
         height: widget.height,
         width: widget.width,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         margin: EdgeInsets.only(
           top: _isPressed ? 4 : 0,
           bottom: _isPressed ? 0 : 4,
@@ -92,7 +95,10 @@ class _PandaButtonState extends State<PandaButton> {
                 fontFamily: 'Fredoka',
               ),
             ),
-            if (widget.icon != null) ...[
+            if (widget.trailing != null) ...[
+              const Spacer(),
+              widget.trailing!,
+            ] else if (widget.icon != null) ...[
               if (widget.text.isNotEmpty) const SizedBox(width: AppSpacing.sm),
               Icon(widget.icon, color: widget.textColor, size: 28),
             ],

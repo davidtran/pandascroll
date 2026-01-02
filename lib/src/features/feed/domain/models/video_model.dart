@@ -13,7 +13,7 @@ class VideoModel {
   final String externalId;
   final String audioUrl;
   final String text;
-  final List<Caption> captions;
+  final List<VideoWindow> captions;
 
   VideoModel({
     required this.id,
@@ -49,9 +49,29 @@ class VideoModel {
       externalId: (json['external_id'] as String?) ?? "",
       audioUrl: json['audio_url'] as String,
       text: json['text'] as String,
-      captions: (json['captions'] as List)
-          .map((e) => Caption.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      captions:
+          (json['captions'] as List?)
+              ?.map((e) => VideoWindow.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class VideoWindow {
+  final String title;
+  final List<Caption> sentences;
+
+  VideoWindow({required this.title, required this.sentences});
+
+  factory VideoWindow.fromJson(Map<String, dynamic> json) {
+    return VideoWindow(
+      title: json['title'] as String? ?? '',
+      sentences:
+          (json['sentences'] as List?)
+              ?.map((e) => Caption.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 }

@@ -18,7 +18,10 @@ class TikTokPlayer extends StatefulWidget {
     required this.onCurrentTime,
     required this.onStateChange,
     required this.onEnded,
+    this.seekStream,
   });
+
+  final Stream<double>? seekStream;
 
   @override
   State<TikTokPlayer> createState() => _TikTokPlayerState();
@@ -32,6 +35,11 @@ class _TikTokPlayerState extends State<TikTokPlayer> {
   void initState() {
     super.initState();
     _initializeWebView();
+    widget.seekStream?.listen((time) {
+      if (mounted) {
+        _sendMessage("seek", value: time);
+      }
+    });
   }
 
   @override

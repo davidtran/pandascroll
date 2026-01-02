@@ -179,7 +179,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
 
   // Bamboo State
   List<AnswerStatus> _answerStatus = [];
-  int _lives = 3; // Changed from 5 to 3
   DateTime? _startTime;
 
   late AudioPlayer _audioPlayer;
@@ -237,7 +236,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
         _correctCount = 0;
         _correctExerciseIds.clear();
         _answerStatus = [];
-        _lives = 3;
         _startTime = DateTime.now();
         _preparationData = null;
         _isPreparationCompleted = false;
@@ -277,15 +275,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
   }
 
   Future<void> _fetchExercises() async {
-    // 1. Check if user has enough paws (READ-ONLY)
-    if (_exercises.isEmpty && _isLoading) {
-      final pawState = ref.read(pawProvider).value;
-      if (pawState == null || pawState.count <= 0) {
-        if (mounted) _showNoEnergyDialog();
-        return;
-      }
-    }
-
     try {
       final response = await ApiClient.get(
         '/exercises?video_id=${widget.videoId}&translate_language=Vietnamese',
@@ -313,17 +302,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
       final exercises = responseData.map((json) {
         return ExerciseModel.fromJson(json);
       }).toList();
-
-      if (exercises.isNotEmpty) {
-        // 2. Consume Paw (WRITE) - Only after successful load
-        final pawNotifier = ref.read(pawProvider.notifier);
-        final success = await pawNotifier.consume();
-
-        if (!success) {
-          if (mounted) _showNoEnergyDialog();
-          return;
-        }
-      }
 
       if (mounted) {
         setState(() {
@@ -387,8 +365,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
       final success =
           _exercises.isNotEmpty && (_correctCount / _exercises.length) > 0.5;
       if (success) {
-        // Refund Paw
-        ref.read(pawProvider.notifier).refund();
         _confettiController.play();
       }
     }
@@ -425,15 +401,7 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
         audioUrl: widget.audioUrl,
         onNext: () {
           Navigator.pop(context);
-          if (isCorrect) {
-            _nextExercise();
-          } else {
-            if (_lives <= 0) {
-              setState(() {}); // Trigger rebuild to show fail screen
-            } else {
-              _nextExercise();
-            }
-          }
+          _nextExercise();
         },
         onRetry: () {
           Navigator.pop(context);
@@ -532,7 +500,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
       _correctCount = 0;
       _correctExerciseIds.clear();
       _answerStatus = [];
-      _lives = 3;
       _startTime = DateTime.now();
       _isPreparationCompleted = false;
     });
@@ -562,22 +529,7 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Hearts Logic
-                  Row(
-                    children: List.generate(3, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Icon(
-                          index < _lives
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: index < _lives ? Colors.red : Colors.grey[300],
-                          size: 20,
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(width: 12),
+
                   GestureDetector(
                     onTap: _handleClose,
                     child: const Icon(
@@ -593,10 +545,7 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
             // 2. Content Area
             Expanded(child: _buildBodyContent()),
 
-            if (!_isCompleted &&
-                _lives > 0 &&
-                !_isLoading &&
-                _exercises.isNotEmpty)
+            if (!_isCompleted && !_isLoading && _exercises.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 0),
                 child: Row(
@@ -614,7 +563,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
                             if (_answerStatus.length <= _currentIndex) {
                               _answerStatus.add(AnswerStatus.unanswer);
                             }
-                            if (_lives > 0) _lives--;
                           });
                           _nextExercise();
                         }
@@ -663,16 +611,6 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
   }
 
   Widget _buildBodyContent() {
-    if (_lives <= 0) {
-      return QuizFailedScreen(
-        onRetry: () {
-          // Retry logic if needed, currently just closes to retry externally
-          _handleClose();
-        },
-        onClose: _handleClose,
-      );
-    }
-
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primaryBrand),
@@ -777,14 +715,9 @@ class _QuizPanelState extends ConsumerState<QuizPanel> {
       } else {
         _answerStatus[_currentIndex] = AnswerStatus.wrong;
       }
-      if (_lives > 0) _lives--;
     });
 
     final correctAnswer = _getExerciseCorrectAnswer(exercise);
-
-    // If lost last life, wait a bit then show fail screen?
-    // Or show feedback first?
-    // Let's show feedback, then on "Next" check lives.
 
     _showFeedback(false, correctAnswer: correctAnswer);
   }

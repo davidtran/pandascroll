@@ -51,24 +51,6 @@ class _QuizCompletionScreenState extends ConsumerState<QuizCompletionScreen> {
       animationsToComplete += widget.correctCount;
     }
 
-    // 2. Paw Animation (if applicable)
-    final bool isSuccess =
-        widget.exercises.isNotEmpty &&
-        (widget.correctCount / widget.exercises.length) > 0.5;
-    final pawState = ref.read(pawProvider).value;
-    final bool needsRefund =
-        isSuccess && pawState != null && pawState.count < pawState.maxCount;
-
-    final pawTargetKey = ref.read(pawIconKeyProvider);
-    final RenderBox? pawTargetBox =
-        pawTargetKey.currentContext?.findRenderObject() as RenderBox?;
-    final RenderBox? pawStartBox =
-        _pawIconKey.currentContext?.findRenderObject() as RenderBox?;
-
-    if (needsRefund && pawTargetBox != null && pawStartBox != null) {
-      animationsToComplete += 1;
-    }
-
     void checkCompletion() {
       completedAnimations++;
       if (completedAnimations >= animationsToComplete) {
@@ -83,9 +65,7 @@ class _QuizCompletionScreenState extends ConsumerState<QuizCompletionScreen> {
                 videoId: widget.videoId,
               );
         }
-        if (needsRefund) {
-          ref.read(pawProvider.notifier).refund();
-        }
+
         widget.onClaim();
       }
     }
@@ -112,24 +92,6 @@ class _QuizCompletionScreenState extends ConsumerState<QuizCompletionScreen> {
           );
         });
       }
-    }
-
-    // Start Paw Animation
-    if (needsRefund && pawTargetBox != null && pawStartBox != null) {
-      final startPos = pawStartBox.localToGlobal(Offset.zero);
-      final targetPos = pawTargetBox.localToGlobal(Offset.zero);
-
-      // Delay slightly to start after some pandas? Or concurrenly.
-      // Let's run concurrently but maybe ensure it's distinct.
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (!mounted) return;
-        _spawnFlyingItem(
-          startPos,
-          targetPos,
-          'assets/images/paw.png',
-          onComplete: checkCompletion,
-        );
-      });
     }
   }
 
@@ -174,11 +136,6 @@ class _QuizCompletionScreenState extends ConsumerState<QuizCompletionScreen> {
     final bool isSuccess =
         widget.exercises.isNotEmpty &&
         (widget.correctCount / widget.exercises.length) > 0.5;
-
-    final pawAsync = ref.watch(pawProvider);
-    final pawState = pawAsync.value;
-    final bool showRefund =
-        isSuccess && pawState != null && pawState.count < pawState.maxCount;
 
     return Center(
       child: Column(
@@ -230,27 +187,6 @@ class _QuizCompletionScreenState extends ConsumerState<QuizCompletionScreen> {
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppColors.accent,
-                    ),
-                  ),
-                ],
-
-                if (widget.correctCount > 0 && showRefund)
-                  const SizedBox(width: 24), // Spacer between rewards
-                // Paw Refund
-                if (showRefund) ...[
-                  Image.asset(
-                    'assets/images/paw.png',
-                    width: 32, // Slightly smaller
-                    height: 32,
-                    key: _pawIconKey,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    "x 1",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBrand,
                     ),
                   ),
                 ],

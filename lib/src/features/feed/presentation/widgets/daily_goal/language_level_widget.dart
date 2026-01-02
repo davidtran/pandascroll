@@ -14,8 +14,6 @@ class LanguageLevelWidget extends ConsumerWidget {
     final profile = ref.watch(userLanguageProfileProvider).value;
     print(profile);
     if (profile == null) return const SizedBox.shrink();
-    final pawAsync = ref.watch(pawProvider);
-    final pawState = pawAsync.value;
     final totalXpForLevel = profile.xp + profile.remainXp;
     final progress = totalXpForLevel > 0
         ? (profile.xp / totalXpForLevel).clamp(0.0, 1.0)
@@ -100,34 +98,6 @@ class LanguageLevelWidget extends ConsumerWidget {
           const SizedBox(width: 12),
           Container(width: 1, height: 24, color: Colors.grey[300]),
           const SizedBox(width: 8),
-
-          // Right: Paw Count
-          if (pawState != null)
-            Row(
-              children: [
-                Image.asset(
-                  'assets/images/paw.png',
-                  width: 16,
-                  height: 16,
-                  key: ref.watch(pawIconKeyProvider),
-                  color: pawState.count == 0
-                      ? Colors.grey
-                      : null, // Grey out if 0
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  "x${pawState.count}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12, // Adjusted font size
-                    color: AppColors.pandaBlack,
-                    fontFamily: 'Fredoka',
-                  ),
-                ),
-                if (pawState.count < 5)
-                  CountdownText(minutes: pawState.regenMinutes),
-              ],
-            ),
         ],
       ),
     );

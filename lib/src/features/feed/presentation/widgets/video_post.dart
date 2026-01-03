@@ -70,11 +70,14 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   Timer? _progressTimer;
   bool _isMuted = false;
   bool _xpAwarded = false;
+  double _languageLevelTop = 0;
+  double _languageLevelHeight = 0;
 
   // Window/Chunk State
   int _currentWindowIndex = 0;
   double _windowStartTime = 0.0;
   double _windowEndTime = 0.0;
+  late PageController _pageController;
 
   // Notifiers for UI updates
   final ValueNotifier<double> _currentTimeNotifier = ValueNotifier(0.0);
@@ -85,10 +88,34 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   final GlobalKey _captionsKey = GlobalKey();
   final GlobalKey _startExerciseKey = GlobalKey();
   final GlobalKey _nextButtonKey = GlobalKey();
+  final GlobalKey _languageLevelKey = GlobalKey(
+    debugLabel: 'language_level_widget',
+  );
 
   TutorialCoachMark? tutorialCoachMark;
   late StatsRepository _statsRepository;
   UserLanguageProfileNotifier? _profileNotifier;
+
+  void updateOverlayPosition() {
+    final RenderBox? renderBox =
+        _languageLevelKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (renderBox != null) {
+      final position = renderBox.localToGlobal(Offset.zero);
+
+      setState(() {
+        _languageLevelTop = position.dy;
+        _languageLevelHeight = renderBox.size.height;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _checkTutorialStatus();
+  }
 
   @override
   void didChangeDependencies() {
@@ -112,6 +139,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     _stopTimer();
     _currentTimeNotifier.removeListener(_tutorialListener);
     _currentTimeNotifier.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -322,34 +350,29 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
   bool _isVideoLoaded = false;
 
-  void _onPlayerStateChange(bool isPlaying) {
-    if (isPlaying) {
-      // If the player reports it's playing, start our smoothing timer
-      _startTimer();
-      // Also ensure our UI reflects it (e.g. if autoplayed)
-      if (_isPaused && mounted) setState(() => _isPaused = false);
+  void _onPlayerStateChange(bool isPlaying, int index) {
+    if (index != _currentWindowIndex)
+      return; // Filter events from inactive windows
 
-      // Mark as loaded once it starts playing
-      if (!_isVideoLoaded && mounted) {
-        setState(() {
-          _isVideoLoaded = true;
-        });
+    if (mounted) {
+      if (isPlaying) {
+        _startTimer();
+        if (_isPaused) setState(() => _isPaused = false);
+        if (!_isVideoLoaded) setState(() => _isVideoLoaded = true);
+      } else {
+        _stopTimer();
       }
-    } else {
-      _stopTimer();
     }
   }
 
-  void _onPlayerEnded() {
+  void _onPlayerEnded(int index) {
+    if (index != _currentWindowIndex) return;
     _stopTimer();
-    _saveStats(widget.video);
-    _currentTimeNotifier.value = 0.0;
-    // Loop logic is often handled by the player (TikTok/YouTube loop params),
-    // but if we need to manually restart:
-    _startTimer();
   }
 
-  void _onPlayerError(String error) {
+  void _onPlayerError(String error, int index) {
+    if (index != _currentWindowIndex) return;
+    debugPrint("Player Error [$index]: $error");
     // 1. Log to Supabase
     ref
         .read(videoStatusRepositoryProvider)
@@ -410,31 +433,143 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     return Stack(
       fit: StackFit.expand,
       children: [
-        _buildPlayer(effectiveIsPlaying),
-        if (_isPaused || !widget.isPlaying && !widget.hideContent)
-          Center(
-            child: withInterceptor(
-              GestureDetector(
-                onTap: _togglePlayPause,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 64,
-                  ),
+        // Horizontal PageView of Videos (Chunks)
+        PageView.builder(
+          controller: _pageController,
+          itemCount: widget.video.captions.isNotEmpty
+              ? widget.video.captions.length
+              : 1,
+          allowImplicitScrolling: false,
+          onPageChanged: (index) {
+            setState(() {
+              _currentWindowIndex = index;
+              _calculateWindowTimes();
+            });
+            // Reset detailed progress for UI
+            print('$_windowStartTime');
+            _currentTimeNotifier.value = _windowStartTime;
+
+            // Force seek to start of new window
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _seekController.add(_windowStartTime);
+              }
+            });
+          },
+          itemBuilder: (context, index) {
+            // Determine playing state for THIS page
+            final isActivePage = index == _currentWindowIndex;
+            final shouldPlay = effectiveIsPlaying && isActivePage;
+
+            // Calculate timing for THIS chunk
+            double chunkStart = 0.0;
+            double chunkEnd = widget.video.durationSeconds.toDouble();
+
+            if (widget.video.captions.isNotEmpty &&
+                index < widget.video.captions.length) {
+              final chunk = widget.video.captions[index];
+              if (chunk.sentences.isNotEmpty &&
+                  chunk.sentences.first.words.isNotEmpty) {
+                chunkStart = chunk.sentences.first.words.first.start;
+                chunkEnd = chunk.sentences.last.words.last.end;
+                // Ensure non-zero duration
+                if (chunkEnd <= chunkStart) chunkEnd = chunkStart + 5.0;
+              }
+            }
+
+            // Translation Logic
+            int translationOffset = 0;
+            if (widget.video.captions.isNotEmpty) {
+              for (int i = 0; i < index; i++) {
+                translationOffset += widget.video.captions[i].sentences.length;
+              }
+            }
+
+            final currentWindowSentences = widget.video.captions.isNotEmpty
+                ? widget.video.captions[index].sentences
+                : <Caption>[];
+
+            final translationsAsync = ref.watch(
+              videoTranslationsProvider(widget.video.id),
+            );
+            final allTranslations = translationsAsync.value ?? [];
+
+            final windowTranslations =
+                (translationOffset < allTranslations.length)
+                ? allTranslations
+                      .skip(translationOffset)
+                      .take(currentWindowSentences.length)
+                      .toList()
+                : <String>[];
+
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. The Player for this Chunk
+                _buildPlayer(
+                  shouldPlay,
+                  windowIndex: index,
+                  start: chunkStart, // Guaranteed double
+                  end: chunkEnd, // Guaranteed double
+                  seekStream: isActivePage ? _seekController.stream : null,
+                  onCurrentTime: isActivePage ? _handleCurrentTime : (t) {},
                 ),
-              ),
-            ),
-          ),
-        // Actions Column (Right Side)
+
+                // 2. Play/Pause Tap Area
+                GestureDetector(
+                  onTap: _togglePlayPause,
+                  behavior: HitTestBehavior.translucent,
+                  child: Container(color: Colors.transparent),
+                ),
+
+                // 3. Play Icon (Centered, per page)
+                if ((_isPaused || !widget.isPlaying) &&
+                    !widget.hideContent &&
+                    isActivePage) // Only show on active page
+                  Center(
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 64,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // 4. Captions Overlay
+                if (widget.video.captions.isNotEmpty)
+                  Positioned(
+                    left: 16,
+                    right: 80,
+                    bottom: 70,
+                    child: withInterceptor(
+                      RepaintBoundary(
+                        child: CaptionsOverlay(
+                          key: ValueKey('captions_$index'),
+                          currentTimeNotifier: _currentTimeNotifier,
+                          captions: currentWindowSentences,
+                          onWordTap: _handleWordTap,
+                          translations: windowTranslations,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+
+        // Fixed Right Buttons
         Positioned(
           right: 16,
-          bottom: 80, // Adjusted to sit above button
+          bottom: 80,
           child: withInterceptor(
             Column(
               children: [
@@ -499,6 +634,19 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                 ),
                 const SizedBox(height: 20),
 
+                // Audio
+                _buildActionItem(
+                  _isMuted ? Icons.volume_off : Icons.volume_up,
+                  "Audio",
+                  Colors.white,
+                  onTap: () {
+                    setState(() {
+                      _isMuted = !_isMuted;
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+
                 // Caption
                 _buildActionItem(
                   settings.captions
@@ -513,71 +661,9 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
           ),
         ),
 
-        // Bottom Info Area (Left Side)
+        // Window Title & Navigation (Top/Center) - Fixed
         Positioned(
-          left: 16,
-          right: 80, // Space for actions
-          bottom: 70, // aligned with actions bottom
-          child: withInterceptor(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Captions Overlay
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: RepaintBoundary(
-                    child: Consumer(
-                      builder: (context, ref, child) {
-                        final translationsAsync = ref.watch(
-                          videoTranslationsProvider(widget.video.id),
-                        );
-                        final allTranslations = translationsAsync.value ?? [];
-
-                        // Calculate offset for current window
-                        int translationOffset = 0;
-                        for (int i = 0; i < _currentWindowIndex; i++) {
-                          if (i < widget.video.captions.length) {
-                            translationOffset +=
-                                widget.video.captions[i].sentences.length;
-                          }
-                        }
-
-                        final currentWindowSentences =
-                            widget.video.captions.isNotEmpty
-                            ? widget
-                                  .video
-                                  .captions[_currentWindowIndex]
-                                  .sentences
-                            : <Caption>[]; // Fix type inference
-
-                        final windowTranslations =
-                            (translationOffset < allTranslations.length)
-                            ? allTranslations
-                                  .skip(translationOffset)
-                                  .take(currentWindowSentences.length)
-                                  .toList()
-                            : <String>[];
-
-                        return CaptionsOverlay(
-                          key: _captionsKey,
-                          currentTimeNotifier: _currentTimeNotifier,
-                          captions: currentWindowSentences,
-                          onWordTap: _handleWordTap,
-                          translations: windowTranslations,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // Window Title & Navigation (Top/Center)
-        Positioned(
-          top: 60,
+          top: _languageLevelTop + _languageLevelHeight + 5,
           left: 0,
           right: 0,
           child: widget.video.captions.isNotEmpty
@@ -590,8 +676,18 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                   hasPrev: _currentWindowIndex > 0,
                   hasNext:
                       _currentWindowIndex < widget.video.captions.length - 1,
-                  onPrev: _prevWindow,
-                  onNext: _nextWindow,
+                  onPrev: () {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  onNext: () {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
                   currentTimeNotifier: _currentTimeNotifier,
                   chunkStartTime: _windowStartTime,
                   chunkEndTime: _windowEndTime,
@@ -734,7 +830,14 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     }
   }
 
-  Widget _buildPlayer(bool isPlaying) {
+  Widget _buildPlayer(
+    bool isPlaying, {
+    required int windowIndex,
+    double? start,
+    double? end,
+    Stream<double>? seekStream,
+    Function(double)? onCurrentTime,
+  }) {
     final isYouTube = widget.video.platformType.toLowerCase() == 'youtube';
 
     String videoId = widget.video.externalId;
@@ -747,24 +850,30 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
       return YouTubePlayer(
         videoId: videoId,
         isPlaying: isPlaying,
-        onCurrentTime: _handleCurrentTime,
-        onStateChange: _onPlayerStateChange,
-        onEnded: _onPlayerEnded,
-        onError: _onPlayerError,
-        seekStream: _seekController.stream,
+        onCurrentTime: onCurrentTime ?? _handleCurrentTime,
+        onStateChange: (state) => _onPlayerStateChange(state, windowIndex),
+        onEnded: () => _onPlayerEnded(windowIndex),
+        onError: (err) => _onPlayerError(err, windowIndex),
+        seekStream: seekStream ?? _seekController.stream,
+        startSeconds: start ?? _windowStartTime,
+        endSeconds: end ?? _windowEndTime,
+      );
+    } else {
+      return TikTokPlayer(
+        videoId: videoId,
+        isPlaying: isPlaying,
+        onCurrentTime: (time) {
+          if (onCurrentTime != null) {
+            onCurrentTime(time);
+          } else {
+            _currentTimeNotifier.value = time;
+          }
+        },
+        onStateChange: (state) => _onPlayerStateChange(state, windowIndex),
+        onEnded: () => _onPlayerEnded(windowIndex),
+        seekStream: seekStream ?? _seekController.stream,
       );
     }
-
-    return TikTokPlayer(
-      videoId: videoId,
-      isPlaying: isPlaying,
-      onCurrentTime: (time) {
-        _currentTimeNotifier.value = time;
-      },
-      onStateChange: _onPlayerStateChange,
-      onEnded: _onPlayerEnded,
-      seekStream: _seekController.stream,
-    );
   }
 
   Widget _buildNavButton({
@@ -866,12 +975,6 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
   bool _shouldCheckTutorial = false; // Initialized in initState
   bool _isTutorialShowing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkTutorialStatus();
-  }
 
   Future<void> _checkTutorialStatus() async {
     final prefs = await SharedPreferences.getInstance();

@@ -16,6 +16,9 @@ class YouTubePlayer extends StatelessWidget {
   final VoidCallback onEnded;
   final Function(String error)? onError;
 
+  final double? startSeconds;
+  final double? endSeconds;
+
   const YouTubePlayer({
     super.key,
     required this.videoId,
@@ -25,32 +28,24 @@ class YouTubePlayer extends StatelessWidget {
     required this.onEnded,
     this.onError,
     this.seekStream,
+    this.startSeconds,
+    this.endSeconds,
   });
 
   final Stream<double>? seekStream;
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return YouTubePlayerWeb(
-        videoId: videoId,
-        isPlaying: isPlaying,
-        onCurrentTime: onCurrentTime,
-        onStateChange: onStateChange,
-        onEnded: onEnded,
-        onError: onError,
-        seekStream: seekStream,
-      );
-    } else {
-      return CustomYouTubePlayerMobile(
-        videoId: videoId,
-        isPlaying: isPlaying,
-        onCurrentTime: onCurrentTime,
-        onStateChange: onStateChange,
-        onEnded: onEnded,
-        onError: onError,
-        seekStream: seekStream,
-      );
-    }
+    return CustomYouTubePlayerMobile(
+      videoId: videoId,
+      isPlaying: isPlaying,
+      onCurrentTime: onCurrentTime,
+      onStateChange: onStateChange,
+      onEnded: onEnded,
+      onError: onError,
+      seekStream: seekStream,
+      startSeconds: startSeconds,
+      endSeconds: endSeconds,
+    );
   }
 }

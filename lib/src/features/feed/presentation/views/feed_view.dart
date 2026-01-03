@@ -103,7 +103,9 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   // Language Level (Left)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: LanguageLevelWidget(),
+                    child: LanguageLevelWidget(
+                      key: const Key("language_level_widget"),
+                    ),
                   ),
                 ],
               ),

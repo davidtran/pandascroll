@@ -138,7 +138,6 @@ class VideoWindowControls extends StatelessWidget {
     required bool isPast,
     required double progress,
   }) {
-    print('$isActive $progress');
     // Styles
     final Color borderColor = (isActive || isPast)
         ? AppColors.pandaBlack

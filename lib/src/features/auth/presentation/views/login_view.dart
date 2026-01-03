@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pandascroll/src/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:pandascroll/src/features/home/presentation/views/main_navigation_view.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/joy_text.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -60,7 +61,9 @@ class LoginView extends ConsumerWidget {
           if (hasProfile) {
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => const FeedView()),
+              MaterialPageRoute(
+                builder: (context) => const MainNavigationView(),
+              ),
               (route) => false,
             );
           } else {

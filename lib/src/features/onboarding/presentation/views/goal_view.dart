@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/features/feed/presentation/controllers/daily_goal_controller.dart';
+import 'package:pandascroll/src/features/home/presentation/views/main_navigation_view.dart';
 import '../../../../core/theme/app_colors.dart';
 
 import '../../../../core/services/notification_service.dart';
@@ -67,7 +68,7 @@ class _GoalViewState extends ConsumerState<GoalView> {
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const FeedView()),
+          MaterialPageRoute(builder: (context) => const MainNavigationView()),
           (route) => false,
         );
       }

@@ -1,6 +1,6 @@
 class ApiKeys {
   static const String revenueCatAppleApiKey =
-      'test_LmtPfvkCipMxZLzNBNwbApwLXih';
+      'appl_xKVwQNcXAXDfJpTrvYVxrGJMbEh';
   static const String revenueCatGoogleApiKey =
-      'test_LmtPfvkCipMxZLzNBNwbApwLXih';
+      'appl_xKVwQNcXAXDfJpTrvYVxrGJMbEh';
 }

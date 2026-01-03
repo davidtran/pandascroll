@@ -33,6 +33,8 @@ class _FeedViewState extends ConsumerState<FeedView> {
   String _panelTitle = "";
   bool _barrierDismissible = true;
   String _currentTab = "Feed";
+  final GlobalKey _headerKey = GlobalKey();
+  double _headerHeight = 90.0; // Default estimate
 
   void _openPanel(String title, Widget content, {bool? barrierDismissible}) {
     setState(() {
@@ -54,6 +56,30 @@ class _FeedViewState extends ConsumerState<FeedView> {
     setState(() {
       _panelTitle = title;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureHeader();
+    });
+  }
+
+  void _measureHeader() {
+    final RenderBox? renderBox =
+        _headerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final position = renderBox.localToGlobal(Offset.zero);
+      final height = renderBox.size.height;
+      final bottom = position.dy + height;
+
+      if (bottom != _headerHeight && bottom > 0) {
+        setState(() {
+          _headerHeight = bottom;
+        });
+      }
+    }
   }
 
   @override
@@ -87,6 +113,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   onOpenPanel: _openPanel,
                   onUpdateTitle: _updateTitle,
                   onClosePanel: _closePanel,
+                  contentTopOffset: _headerHeight,
                 )
               : const RoadmapView(),
 
@@ -103,9 +130,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
                   // Language Level (Left)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: LanguageLevelWidget(
-                      key: const Key("language_level_widget"),
-                    ),
+                    child: LanguageLevelWidget(key: _headerKey),
                   ),
                 ],
               ),
@@ -183,7 +208,10 @@ class _VideoPageFeed extends ConsumerWidget {
     required this.onOpenPanel,
     required this.onUpdateTitle,
     required this.onClosePanel,
+    required this.contentTopOffset,
   });
+
+  final double contentTopOffset;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -258,6 +286,7 @@ class _VideoPageFeed extends ConsumerWidget {
             CommentsPanel(videoId: videos[index].id),
           ),
           onShowPanel: (title, widget) => onOpenPanel(title, widget),
+          contentTopOffset: contentTopOffset,
           onSkip: () {
             if (index < videos.length - 1) {
               pageController.animateToPage(

@@ -159,7 +159,7 @@ class VideoWindowControls extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.4), // Base background
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor, width: 0.5),
         boxShadow: shadows,
       ),
       child: ClipRRect(

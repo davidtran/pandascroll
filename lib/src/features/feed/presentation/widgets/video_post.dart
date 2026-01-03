@@ -2,9 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/with_interceptor.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
-
-import 'play_controls.dart';
 
 import '../../../profile/presentation/views/profile_view.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +22,7 @@ import '../../domain/models/video_model.dart';
 import '../../domain/models/dictionary_model.dart';
 import '../../../onboarding/presentation/widgets/panda_button.dart';
 import 'captions_overlay.dart';
-import 'comments_panel.dart';
+
 import 'dictionary_panel.dart';
 import 'players/tiktok_player.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
@@ -33,7 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'players/youtube_player.dart';
 import '../providers/stats_provider.dart';
 import '../../data/video_status_repository.dart';
-import 'video_feed_header.dart';
+
 import 'video_window_controls.dart';
 
 class VideoPost extends ConsumerStatefulWidget {
@@ -55,10 +52,12 @@ class VideoPost extends ConsumerStatefulWidget {
     required this.onShowPanel,
     this.onSkip,
     this.onProgress, // Add progress callback if needed for top bar
+    this.contentTopOffset = 80.0, // Default fallback
   });
 
   final Function(double)? onProgress;
   final VoidCallback? onSkip;
+  final double contentTopOffset;
 
   @override
   ConsumerState<VideoPost> createState() => _VideoPostState();
@@ -67,16 +66,15 @@ class VideoPost extends ConsumerStatefulWidget {
 class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   bool _isPaused = false;
   bool _isNavigatedAway = false;
-  Timer? _progressTimer;
+
   bool _isMuted = false;
   bool _xpAwarded = false;
-  double _languageLevelTop = 0;
-  double _languageLevelHeight = 0;
 
   // Window/Chunk State
   int _currentWindowIndex = 0;
   double _windowStartTime = 0.0;
   double _windowEndTime = 0.0;
+  String _videoId = '';
   late PageController _pageController;
 
   // Notifiers for UI updates
@@ -88,33 +86,17 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   final GlobalKey _captionsKey = GlobalKey();
   final GlobalKey _startExerciseKey = GlobalKey();
   final GlobalKey _nextButtonKey = GlobalKey();
-  final GlobalKey _languageLevelKey = GlobalKey(
-    debugLabel: 'language_level_widget',
-  );
 
   TutorialCoachMark? tutorialCoachMark;
   late StatsRepository _statsRepository;
   UserLanguageProfileNotifier? _profileNotifier;
-
-  void updateOverlayPosition() {
-    final RenderBox? renderBox =
-        _languageLevelKey.currentContext?.findRenderObject() as RenderBox?;
-
-    if (renderBox != null) {
-      final position = renderBox.localToGlobal(Offset.zero);
-
-      setState(() {
-        _languageLevelTop = position.dy;
-        _languageLevelHeight = renderBox.size.height;
-      });
-    }
-  }
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _checkTutorialStatus();
+    _videoId = _extractVideoId(widget.video.url) ?? '';
   }
 
   @override
@@ -136,7 +118,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   void dispose() {
     routeObserver.unsubscribe(this);
     _saveStats(widget.video);
-    _stopTimer();
+
     _currentTimeNotifier.removeListener(_tutorialListener);
     _currentTimeNotifier.dispose();
     _pageController.dispose();
@@ -146,30 +128,6 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   void _toggleCaptions() {
     print('toggle captions');
     ref.read(settingsProvider.notifier).toggleCaptions();
-  }
-
-  void _startTimer() {
-    _stopTimer();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (_isPaused || !_isVideoLoaded) return;
-
-      final newTime = _currentTimeNotifier.value + 0.05;
-      // Simple clamp to prevent running past end if player doesn't stop us
-      if (newTime <= widget.video.durationSeconds) {
-        _currentTimeNotifier.value = newTime;
-      }
-
-      // Check window logic locally to trigger UI updates if needed
-      if (_windowEndTime > 0 && newTime >= _windowEndTime) {
-        // We don't auto-seek here as the player logic handles loops,
-        // but we ensure the bar fills up.
-      }
-    });
-  }
-
-  void _stopTimer() {
-    _progressTimer?.cancel();
-    _progressTimer = null;
   }
 
   void _handleWordTap(String word, String sentence) async {
@@ -266,23 +224,23 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   }
 
   void _saveStats(VideoModel video) {
-    final duration = _currentTimeNotifier.value;
-    print('save stats');
-    print('video duration $duration');
-    if (duration > 1.0) {
-      // Only save if watched at least 1 second
-      _statsRepository.updateUserVideoStats(
-        videoId: video.id,
-        viewDuration: duration,
-        lastViewedAt: DateTime.now(),
-      );
+    // final duration = _currentTimeNotifier.value;
+    // print('save stats');
+    // print('video duration $duration');
+    // if (duration > 1.0) {
+    //   // Only save if watched at least 1 second
+    //   _statsRepository.updateUserVideoStats(
+    //     videoId: video.id,
+    //     viewDuration: duration,
+    //     lastViewedAt: DateTime.now(),
+    //   );
 
-      // Add XP for watching video
-      if (!_xpAwarded) {
-        _xpAwarded = true;
-        _profileNotifier?.addXp(event: 'watch_video', videoId: widget.video.id);
-      }
-    }
+    //   // Add XP for watching video
+    //   if (!_xpAwarded) {
+    //     _xpAwarded = true;
+    //     _profileNotifier?.addXp(event: 'watch_video', videoId: widget.video.id);
+    //   }
+    // }
   }
 
   void _handleVideoChanged() {
@@ -356,18 +314,14 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
     if (mounted) {
       if (isPlaying) {
-        _startTimer();
         if (_isPaused) setState(() => _isPaused = false);
         if (!_isVideoLoaded) setState(() => _isVideoLoaded = true);
-      } else {
-        _stopTimer();
       }
     }
   }
 
   void _onPlayerEnded(int index) {
     if (index != _currentWindowIndex) return;
-    _stopTimer();
   }
 
   void _onPlayerError(String error, int index) {
@@ -663,7 +617,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
         // Window Title & Navigation (Top/Center) - Fixed
         Positioned(
-          top: _languageLevelTop + _languageLevelHeight + 5,
+          top: widget.contentTopOffset + 5,
           left: 0,
           right: 0,
           child: widget.video.captions.isNotEmpty
@@ -840,15 +794,9 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   }) {
     final isYouTube = widget.video.platformType.toLowerCase() == 'youtube';
 
-    String videoId = widget.video.externalId;
-
-    if (videoId.isEmpty) {
-      videoId = _extractVideoId(widget.video.url) ?? '';
-    }
-
     if (isYouTube) {
       return YouTubePlayer(
-        videoId: videoId,
+        videoId: _videoId,
         isPlaying: isPlaying,
         onCurrentTime: onCurrentTime ?? _handleCurrentTime,
         onStateChange: (state) => _onPlayerStateChange(state, windowIndex),
@@ -860,7 +808,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
       );
     } else {
       return TikTokPlayer(
-        videoId: videoId,
+        videoId: _videoId,
         isPlaying: isPlaying,
         onCurrentTime: (time) {
           if (onCurrentTime != null) {
@@ -874,44 +822,6 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
         seekStream: seekStream ?? _seekController.stream,
       );
     }
-  }
-
-  Widget _buildNavButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-    bool isEnabled = true,
-    bool isPrimary = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44, // w-10 approx
-        height: 44,
-        decoration: BoxDecoration(
-          color: isPrimary
-              ? AppColors.bambooGreen.withOpacity(isEnabled ? 0.9 : 0.6)
-              : Colors.white.withOpacity(isEnabled ? 0.2 : 0.1),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isPrimary
-                ? AppColors.bambooLight.withOpacity(0.5)
-                : Colors.white.withOpacity(0.3),
-            width: 2,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              offset: Offset(0, 4),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: Center(child: Icon(icon, color: Colors.white, size: 24)),
-        ),
-      ),
-    );
   }
 
   Widget _buildActionItem(

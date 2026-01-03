@@ -178,7 +178,8 @@ class _CustomYouTubePlayerMobileState
                         'cc_lang_pref': 'en',
                         'loop': 1,
                         'autoplay': ${boolean(value: widget.isPlaying)},
-                        'start': ${widget.startSeconds?.toInt() ?? 1}
+                        'start': ${widget.startSeconds?.toDouble() ?? 1},
+                        'end': ${widget.endSeconds?.toDouble() ?? 1},
                     },
                     events: {
                         onReady: function(event) { sendMessageToDart('Ready'); },

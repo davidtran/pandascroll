@@ -15,9 +15,7 @@ class YouTubePlayer extends StatelessWidget {
   final Function(bool) onStateChange;
   final VoidCallback onEnded;
   final Function(String error)? onError;
-
-  final double? startSeconds;
-  final double? endSeconds;
+  final Stream<double>? seekStream;
 
   const YouTubePlayer({
     super.key,
@@ -28,11 +26,7 @@ class YouTubePlayer extends StatelessWidget {
     required this.onEnded,
     this.onError,
     this.seekStream,
-    this.startSeconds,
-    this.endSeconds,
   });
-
-  final Stream<double>? seekStream;
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +38,6 @@ class YouTubePlayer extends StatelessWidget {
       onEnded: onEnded,
       onError: onError,
       seekStream: seekStream,
-      startSeconds: startSeconds,
-      endSeconds: endSeconds,
     );
   }
 }

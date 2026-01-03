@@ -110,7 +110,7 @@ class ProfileStats extends ConsumerWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.black, width: 2),
         boxShadow: const [
-          BoxShadow(color: Colors.black, blurRadius: 0, offset: Offset(4, 4)),
+          BoxShadow(color: Colors.black, blurRadius: 0, offset: Offset(4, 2)),
         ],
       ),
       child: Column(

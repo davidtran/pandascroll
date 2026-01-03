@@ -31,7 +31,9 @@ import 'players/youtube_player.dart';
 import '../providers/stats_provider.dart';
 import '../../data/video_status_repository.dart';
 
+import 'video_feed_header.dart';
 import 'video_window_controls.dart';
+import 'video_progress_bar.dart';
 
 class VideoPost extends ConsumerStatefulWidget {
   final VideoModel video;
@@ -224,23 +226,23 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   }
 
   void _saveStats(VideoModel video) {
-    // final duration = _currentTimeNotifier.value;
-    // print('save stats');
-    // print('video duration $duration');
-    // if (duration > 1.0) {
-    //   // Only save if watched at least 1 second
-    //   _statsRepository.updateUserVideoStats(
-    //     videoId: video.id,
-    //     viewDuration: duration,
-    //     lastViewedAt: DateTime.now(),
-    //   );
+    final duration = _currentTimeNotifier.value;
+    print('save stats');
+    print('video duration $duration');
+    if (duration > 1.0) {
+      // Only save if watched at least 1 second
+      _statsRepository.updateUserVideoStats(
+        videoId: video.id,
+        viewDuration: duration,
+        lastViewedAt: DateTime.now(),
+      );
 
-    //   // Add XP for watching video
-    //   if (!_xpAwarded) {
-    //     _xpAwarded = true;
-    //     _profileNotifier?.addXp(event: 'watch_video', videoId: widget.video.id);
-    //   }
-    // }
+      // Add XP for watching video
+      if (!_xpAwarded) {
+        _xpAwarded = true;
+        _profileNotifier?.addXp(event: 'watch_video', videoId: widget.video.id);
+      }
+    }
   }
 
   void _handleVideoChanged() {
@@ -387,6 +389,9 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // 1. Single Persistent Player
+        _buildPlayer(effectiveIsPlaying, windowIndex: _currentWindowIndex),
+
         // Horizontal PageView of Videos (Chunks)
         PageView.builder(
           controller: _pageController,
@@ -413,23 +418,6 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
           itemBuilder: (context, index) {
             // Determine playing state for THIS page
             final isActivePage = index == _currentWindowIndex;
-            final shouldPlay = effectiveIsPlaying && isActivePage;
-
-            // Calculate timing for THIS chunk
-            double chunkStart = 0.0;
-            double chunkEnd = widget.video.durationSeconds.toDouble();
-
-            if (widget.video.captions.isNotEmpty &&
-                index < widget.video.captions.length) {
-              final chunk = widget.video.captions[index];
-              if (chunk.sentences.isNotEmpty &&
-                  chunk.sentences.first.words.isNotEmpty) {
-                chunkStart = chunk.sentences.first.words.first.start;
-                chunkEnd = chunk.sentences.last.words.last.end;
-                // Ensure non-zero duration
-                if (chunkEnd <= chunkStart) chunkEnd = chunkStart + 5.0;
-              }
-            }
 
             // Translation Logic
             int translationOffset = 0;
@@ -459,17 +447,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
             return Stack(
               fit: StackFit.expand,
               children: [
-                // 1. The Player for this Chunk
-                _buildPlayer(
-                  shouldPlay,
-                  windowIndex: index,
-                  start: chunkStart, // Guaranteed double
-                  end: chunkEnd, // Guaranteed double
-                  seekStream: isActivePage ? _seekController.stream : null,
-                  onCurrentTime: isActivePage ? _handleCurrentTime : (t) {},
-                ),
-
-                // 2. Play/Pause Tap Area
+                // 1. Transparent Touch Layer for Play/Pause
                 GestureDetector(
                   onTap: _togglePlayPause,
                   behavior: HitTestBehavior.translucent,
@@ -502,7 +480,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                   Positioned(
                     left: 16,
                     right: 80,
-                    bottom: 70,
+                    bottom: 75,
                     child: withInterceptor(
                       RepaintBoundary(
                         child: CaptionsOverlay(
@@ -534,9 +512,12 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(2),
+                      width: 36,
+                      height: 36,
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
+
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black26,
@@ -574,7 +555,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 10),
 
                 // Save (Like)
                 _buildActionItem(
@@ -586,7 +567,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                     // Reference implementation logic for like/save
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 // Audio
                 _buildActionItem(
@@ -599,7 +580,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                     });
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 // Caption
                 _buildActionItem(
@@ -617,7 +598,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
 
         // Window Title & Navigation (Top/Center) - Fixed
         Positioned(
-          top: widget.contentTopOffset + 5,
+          top: widget.contentTopOffset + 10,
           left: 0,
           right: 0,
           child: widget.video.captions.isNotEmpty
@@ -642,6 +623,19 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                       curve: Curves.easeInOut,
                     );
                   },
+                )
+              : const SizedBox.shrink(),
+        ),
+
+        // Bottom Progress Bar
+        Positioned(
+          left: -16,
+          right: -16,
+          bottom: 0, // Consistent padding from bottom
+          child: widget.video.captions.isNotEmpty
+              ? VideoProgressBar(
+                  totalChunks: widget.video.captions.length,
+                  currentChunkIndex: _currentWindowIndex,
                   currentTimeNotifier: _currentTimeNotifier,
                   chunkStartTime: _windowStartTime,
                   chunkEndTime: _windowEndTime,
@@ -659,43 +653,28 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
             opacity: widget.hideContent ? 0.0 : 1.0,
             child: PandaButton(
               text: "START QUIZ",
-              onPressed: !_xpAwarded ? () {} : widget.onStartQuiz,
-              disabled: _isTutorialShowing || !_xpAwarded,
-              backgroundColor: !_xpAwarded
-                  ? Colors.grey[300]!
-                  : AppColors.bambooGreen,
-              textColor: AppColors.pandaBlack.withOpacity(
-                !_xpAwarded ? 0.5 : 1.0,
-              ),
+              onPressed: widget.onStartQuiz,
+              disabled: _isTutorialShowing,
+              backgroundColor: AppColors.bambooGreen,
+              textColor: AppColors.pandaBlack,
               borderColor: AppColors.pandaBlack,
               icon: null, // We use leading/trailing manually or just leading
               height: 50,
-              leading: Icon(
-                Icons.quiz,
-                color: AppColors.pandaBlack.withOpacity(
-                  !_xpAwarded ? 0.5 : 1.0,
+              leading: Icon(Icons.quiz, color: AppColors.pandaBlack, size: 28),
+              trailing: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.pandaBlack, width: 2),
                 ),
-                size: 28,
+                child: const Icon(
+                  Icons.arrow_forward,
+                  size: 18,
+                  color: AppColors.pandaBlack,
+                ),
               ),
-              trailing: !_xpAwarded
-                  ? Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[400],
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.pandaBlack,
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.lock,
-                        size: 18,
-                        color: AppColors.pandaBlack,
-                      ),
-                    )
-                  : null,
               shadowColor: const Color.fromARGB(255, 38, 38, 38),
             ),
           ),
@@ -784,42 +763,27 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     }
   }
 
-  Widget _buildPlayer(
-    bool isPlaying, {
-    required int windowIndex,
-    double? start,
-    double? end,
-    Stream<double>? seekStream,
-    Function(double)? onCurrentTime,
-  }) {
+  Widget _buildPlayer(bool isPlaying, {required int windowIndex}) {
     final isYouTube = widget.video.platformType.toLowerCase() == 'youtube';
 
     if (isYouTube) {
       return YouTubePlayer(
         videoId: _videoId,
         isPlaying: isPlaying,
-        onCurrentTime: onCurrentTime ?? _handleCurrentTime,
+        onCurrentTime: _handleCurrentTime,
         onStateChange: (state) => _onPlayerStateChange(state, windowIndex),
         onEnded: () => _onPlayerEnded(windowIndex),
         onError: (err) => _onPlayerError(err, windowIndex),
-        seekStream: seekStream ?? _seekController.stream,
-        startSeconds: start ?? _windowStartTime,
-        endSeconds: end ?? _windowEndTime,
+        seekStream: _seekController.stream,
       );
     } else {
       return TikTokPlayer(
         videoId: _videoId,
         isPlaying: isPlaying,
-        onCurrentTime: (time) {
-          if (onCurrentTime != null) {
-            onCurrentTime(time);
-          } else {
-            _currentTimeNotifier.value = time;
-          }
-        },
+        onCurrentTime: _handleCurrentTime,
         onStateChange: (state) => _onPlayerStateChange(state, windowIndex),
         onEnded: () => _onPlayerEnded(windowIndex),
-        seekStream: seekStream ?? _seekController.stream,
+        seekStream: _seekController.stream,
       );
     }
   }
@@ -830,7 +794,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
     Color color, {
     bool isLike = false,
     VoidCallback? onTap,
-    double size = 28, // Reduced slightly
+    double size = 18, // Reduced slightly
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -842,19 +806,12 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: Container(
-                width: 48, // w-11 approx
-                height: 48,
+                width: 36, // w-11 approx
+                height: 36,
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.4),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      offset: Offset(0, 4),
-                      blurRadius: 6,
-                    ),
-                  ],
+                  border: Border.all(color: Colors.white, width: 1),
                 ),
                 child: Center(
                   child: Icon(icon, color: Colors.white, size: size),

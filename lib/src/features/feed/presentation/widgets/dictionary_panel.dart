@@ -23,9 +23,6 @@ class DictionaryPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('aaaa');
-    // const Color pandaBlack = AppColors.textMain; // Already defined
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       child: Column(
@@ -79,13 +76,14 @@ class DictionaryPanel extends ConsumerWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
+                          color: AppColors.accentFun,
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.pandaBlack),
                         ),
                         child: Text(
                           data.type.toUpperCase(), // Noun
                           style: const TextStyle(
-                            color: Colors.grey,
+                            color: AppColors.pandaBlack,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.0,
@@ -101,7 +99,7 @@ class DictionaryPanel extends ConsumerWidget {
 
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Divider(color: Colors.grey, height: 1, thickness: 0.2),
+            child: Divider(color: Colors.grey, height: 2, thickness: 0.2),
           ),
 
           // Definition
@@ -113,7 +111,7 @@ class DictionaryPanel extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: Colors.grey[400],
+                  color: AppColors.bambooGreen,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -216,7 +214,7 @@ class DictionaryPanel extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[100]!, width: 2),
+        border: Border.all(color: AppColors.bambooGreen!, width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),

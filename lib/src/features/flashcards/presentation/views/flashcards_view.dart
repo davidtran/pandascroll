@@ -689,7 +689,7 @@ class _FlashcardsViewState extends ConsumerState<FlashcardsView> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Nunito',
-                    fontSize: 64,
+                    fontSize: card.type == 'word' ? 64 : 48,
                     fontWeight: FontWeight.w900,
                     color: text,
                     height: 1.1,

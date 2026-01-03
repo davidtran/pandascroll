@@ -44,7 +44,7 @@ class WeeklyActivityChart extends ConsumerWidget {
               BoxShadow(
                 color: Colors.black,
                 blurRadius: 0,
-                offset: Offset(4, 4),
+                offset: Offset(4, 2),
               ),
             ],
           ),

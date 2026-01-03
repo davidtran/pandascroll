@@ -14,8 +14,6 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
   final VoidCallback onEnded;
   final Stream<double>? seekStream;
   final Function(String error)? onError;
-  final double? startSeconds;
-  final double? endSeconds;
 
   const CustomYouTubePlayerMobile({
     super.key,
@@ -26,8 +24,6 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
     required this.onEnded,
     this.onError,
     this.seekStream,
-    this.startSeconds,
-    this.endSeconds,
   });
 
   @override
@@ -82,14 +78,6 @@ class _CustomYouTubePlayerMobileState
         _play();
       } else {
         _pause();
-      }
-    }
-
-    // Check for start time change (e.g. window switch)
-    if (widget.startSeconds != oldWidget.startSeconds &&
-        widget.startSeconds != null) {
-      if (_isPlayerReady) {
-        _seekTo(widget.startSeconds!);
       }
     }
   }
@@ -178,8 +166,6 @@ class _CustomYouTubePlayerMobileState
                         'cc_lang_pref': 'en',
                         'loop': 1,
                         'autoplay': ${boolean(value: widget.isPlaying)},
-                        'start': ${widget.startSeconds?.toDouble() ?? 1},
-                        'end': ${widget.endSeconds?.toDouble() ?? 1},
                     },
                     events: {
                         onReady: function(event) { sendMessageToDart('Ready'); },
@@ -244,7 +230,7 @@ class _CustomYouTubePlayerMobileState
 
             function loadById(videoId) {
                 if (player && typeof player.loadVideoById === 'function') {
-                    player.loadVideoById({videoId, startSeconds: ${widget.startSeconds?.toDouble() ?? 1}, endSeconds: ${widget.endSeconds?.toDouble() ?? 1}});
+                    player.loadVideoById({videoId});
                 }
                 return '';
             }

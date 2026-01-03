@@ -38,13 +38,23 @@ class LanguageLevelWidget extends ConsumerWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primaryBrand,
-              border: Border.all(color: Colors.black, width: 2),
+              border: Border.all(color: Colors.black, width: 1),
             ),
             child: Image.asset(
               'assets/images/panda.png',
-              width: 20,
-              height: 20,
+              width: 16,
+              height: 16,
               key: ref.watch(pandaIconKeyProvider),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          Text(
+            "LEVEL ${profile.level}",
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Fredoka',
             ),
           ),
           const SizedBox(width: 8),
@@ -54,15 +64,6 @@ class LanguageLevelWidget extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                "LEVEL ${profile.level}",
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Fredoka',
-                ),
-              ),
-              const SizedBox(height: 3),
               Row(
                 children: [
                   SizedBox(
@@ -96,8 +97,6 @@ class LanguageLevelWidget extends ConsumerWidget {
 
           // Divider
           const SizedBox(width: 12),
-          Container(width: 1, height: 24, color: Colors.grey[300]),
-          const SizedBox(width: 8),
         ],
       ),
     );

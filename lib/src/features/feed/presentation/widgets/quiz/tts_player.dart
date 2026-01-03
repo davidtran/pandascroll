@@ -7,12 +7,14 @@ class TtsPlayer extends StatefulWidget {
   final String id;
   final String type; // 'video' | 'word' | 'sentence'
   final bool autoPlay;
+  final double size;
 
   const TtsPlayer({
     super.key,
     required this.id,
     required this.type,
     this.autoPlay = false,
+    this.size = 24,
   });
 
   @override
@@ -81,10 +83,10 @@ class _TtsPlayerState extends State<TtsPlayer> {
           shape: BoxShape.circle,
         ),
         child: _isLoading
-            ? const SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(
+            ? SizedBox(
+                width: widget.size * 0.5,
+                height: widget.size * 0.5,
+                child: const CircularProgressIndicator(
                   strokeWidth: 2,
                   color: Colors.black,
                 ),
@@ -92,7 +94,7 @@ class _TtsPlayerState extends State<TtsPlayer> {
             : Icon(
                 Icons.volume_up_rounded,
                 color: _hasError ? Colors.red : AppColors.textMain,
-                size: 24,
+                size: widget.size,
               ),
       ),
     );

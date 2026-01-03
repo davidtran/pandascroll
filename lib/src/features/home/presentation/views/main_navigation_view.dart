@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_colors.dart';
 
 import '../../../feed/presentation/views/feed_view.dart';
 import '../../../flashcards/presentation/views/flashcards_view.dart';
 import '../../../flashcards/data/flashcards_repository.dart';
 import '../../../profile/presentation/views/profile_view.dart';
+import '../../../dictionary/presentation/views/my_dictionary_view.dart';
 import '../providers/main_navigation_provider.dart';
 
 class MainNavigationView extends ConsumerStatefulWidget {
@@ -20,6 +22,7 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
   final List<Widget> _pages = const [
     FeedView(),
     FlashcardsView(),
+    MyDictionaryView(),
     ProfileView(),
   ];
 
@@ -32,11 +35,17 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
 
   @override
   Widget build(BuildContext context) {
-    final isProfile = _currentIndex == 2;
-    final backgroundColor = isProfile ? Colors.white : Colors.black;
-    final contentColor = isProfile ? Colors.black : Colors.white;
-    final unselectedColor = isProfile ? Colors.grey[400] : Colors.grey[600];
-    final borderColor = isProfile ? Colors.black12 : Colors.white12;
+    final isProfile = _currentIndex == 3;
+    final isDictionary = _currentIndex == 2;
+    final isLightMode = isProfile || isDictionary;
+
+    final backgroundColor = isDictionary
+        ? AppColors.funBg
+        : (isProfile ? Colors.white : Colors.black);
+
+    final contentColor = isLightMode ? Colors.black : Colors.white;
+    final unselectedColor = isLightMode ? Colors.grey[400] : Colors.grey[600];
+    final borderColor = isLightMode ? Colors.black12 : Colors.white12;
     final hasVirtualHomeButton = MediaQuery.of(context).padding.bottom > 0;
 
     return Scaffold(
@@ -131,8 +140,13 @@ class _MainNavigationViewState extends ConsumerState<MainNavigationView> {
                     label: 'cards',
                   ),
                   const BottomNavigationBarItem(
-                    icon: Icon(Icons.person_outline),
-                    activeIcon: Icon(Icons.person),
+                    icon: Icon(Icons.menu_book_outlined, size: 20),
+                    activeIcon: Icon(Icons.menu_book, size: 20),
+                    label: 'dictionary',
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.person_outline, size: 20),
+                    activeIcon: Icon(Icons.person, size: 20),
                     label: 'profile',
                   ),
                 ],

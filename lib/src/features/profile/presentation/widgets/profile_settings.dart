@@ -198,7 +198,7 @@ class ProfileSettings extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.black, width: 2),
-        boxShadow: [BoxShadow(color: Colors.black, offset: const Offset(4, 4))],
+        boxShadow: [BoxShadow(color: Colors.black, offset: const Offset(4, 2))],
       ),
       child: Column(children: children),
     );

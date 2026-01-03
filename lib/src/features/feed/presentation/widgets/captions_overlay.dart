@@ -160,7 +160,7 @@ class _CaptionContainerState extends State<_CaptionContainer> {
             boxShadow: const [
               BoxShadow(
                 color: AppColors.pandaBlack,
-                offset: Offset(4, 6),
+                offset: Offset(2, 4),
                 blurRadius: 0,
               ),
             ],
@@ -199,7 +199,7 @@ class _CaptionContainerState extends State<_CaptionContainer> {
                         color: AppColors
                             .textMain, // was bambooDark, now textMain or per design
                         fontFamily: 'Nunito', // Body font
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         fontStyle: FontStyle.italic,
                       ).copyWith(
@@ -218,7 +218,7 @@ class _CaptionContainerState extends State<_CaptionContainer> {
           child: Transform.rotate(
             angle: -0.1, // approx -6 degrees
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors
                     .bambooGreen, // Or accent orange from HTML example used orange, but let's stick to bamboo green or accent
@@ -232,7 +232,7 @@ class _CaptionContainerState extends State<_CaptionContainer> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.translate, color: Colors.white, size: 16),
+              child: const Icon(Icons.translate, color: Colors.black, size: 12),
             ),
           ),
         ),
@@ -271,7 +271,7 @@ class _HighlightableWord extends StatelessWidget {
                   ? AppColors.bambooDark
                   : AppColors.pandaBlack,
               fontFamily: 'Fredoka', // Display font
-              fontSize: 16, // roughly text-lg/xl
+              fontSize: 21, // roughly text-lg/xl
               fontWeight: FontWeight.bold,
               height: 1.1,
             ),

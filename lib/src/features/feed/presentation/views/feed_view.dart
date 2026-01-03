@@ -61,9 +61,6 @@ class _FeedViewState extends ConsumerState<FeedView> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measureHeader();
-    });
   }
 
   void _measureHeader() {
@@ -74,7 +71,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
       final height = renderBox.size.height;
       final bottom = position.dy + height;
 
-      if (bottom != _headerHeight && bottom > 0) {
+      if (bottom != _headerHeight && bottom > 0.5) {
         setState(() {
           _headerHeight = bottom;
         });
@@ -84,6 +81,10 @@ class _FeedViewState extends ConsumerState<FeedView> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureHeader();
+    });
+
     // OPTIMIZATION 1: Only watch the loading/error state for the root scaffold
     final isLoading = ref.watch(videoFeedProvider.select((s) => s.isLoading));
     final error = ref.watch(videoFeedProvider.select((s) => s.error));

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
@@ -74,6 +75,7 @@ class ApiClient {
     required String filePath,
     required String fieldName,
     String? contentType,
+    Map<String, String>? fields,
   }) async {
     final token = _getToken();
     if (token == null) {
@@ -85,15 +87,35 @@ class ApiClient {
     final request = http.MultipartRequest('POST', url);
 
     request.headers['Authorization'] = 'Bearer $token';
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
 
-    final file = File(filePath);
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        fieldName,
-        file.path,
-        contentType: contentType != null ? MediaType.parse(contentType) : null,
-      ),
-    );
+    if (kIsWeb) {
+      // On web, filePath is a Blob URL
+      final response = await http.get(Uri.parse(filePath));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          fieldName,
+          response.bodyBytes,
+          filename: 'recording.m4a', // Arbitrary filename for blob
+          contentType: contentType != null
+              ? MediaType.parse(contentType)
+              : null,
+        ),
+      );
+    } else {
+      final file = File(filePath);
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          fieldName,
+          file.path,
+          contentType: contentType != null
+              ? MediaType.parse(contentType)
+              : null,
+        ),
+      );
+    }
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);

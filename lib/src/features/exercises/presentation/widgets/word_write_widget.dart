@@ -58,31 +58,125 @@ class _WordWriteWidgetState extends State<WordWriteWidget> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 32),
-                const Text(
-                  "Write this in Target Language",
-                  style: TextStyle(
-                    fontFamily: 'Fredoka',
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
+                // Question Box
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    // Main Content Box
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.funBg,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: AppColors.pandaBlack,
+                          width: 3,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.pandaBlack,
+                            offset: Offset(4, 4),
+                            blurRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  widget.currentWord.translation,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontFamily: 'Fredoka',
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.pandaBlack,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Styled Audio Button
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.pandaBlack,
+                                    width: 2,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      offset: Offset(0, 2),
+                                      blurRadius: 0,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: TtsPlayer(
+                                    id: widget.currentWord.id,
+                                    type: 'dictionary',
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Optional: Provide context hint text below if needed
+                          // const SizedBox(height: 8),
+                          // Text("Type the meaning...", style: ...)
+                        ],
+                      ),
+                    ),
+                    // Floating Label
+                    Positioned(
+                      top: -14,
+                      child: Transform.rotate(
+                        angle: -0.02, // ~1 degree tilt
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.pandaBlack,
+                              width: 2,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                offset: Offset(0, 2),
+                                blurRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            "TRANSLATE THIS",
+                            style: TextStyle(
+                              fontFamily: 'Fredoka', // Or system font
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.pandaBlack,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                // Hint: Translation
-                Text(
-                  widget.currentWord.translation,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.pandaBlack,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Audio Hint
-                TtsPlayer(id: widget.currentWord.id, type: 'dictionary'),
-
+                // End Question Box
                 const SizedBox(height: 32),
 
                 Padding(

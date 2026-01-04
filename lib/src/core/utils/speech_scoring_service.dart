@@ -3,12 +3,13 @@ import '../network/api_client.dart';
 
 class SpeechScoringService {
   /// Uploads audio file to /transcribe endpoint and returns the transcribed text.
-  static Future<String> transcribeAudio(String filePath) async {
+  static Future<String> transcribeAudio(String filePath, {String? hint}) async {
     final data = await ApiClient.upload(
       '/transcribe',
       filePath: filePath,
       fieldName: 'file',
       contentType: 'audio/m4a',
+      fields: hint != null ? {'hint': hint} : null,
     );
     return data['text'] as String? ?? '';
   }

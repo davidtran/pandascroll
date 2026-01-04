@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
+import 'package:pandascroll/src/features/exercises/presentation/widgets/exercise_progress_bar.dart';
 import 'package:pandascroll/src/features/feed/domain/models/dictionary_model.dart';
 import 'package:pandascroll/src/features/exercises/presentation/controllers/video_exercise_controller.dart';
 import 'dart:ui';
@@ -13,6 +14,7 @@ import 'word_quiz_widget.dart';
 import 'word_speak_widget.dart';
 import 'word_write_widget.dart';
 import 'exercise_complete_widget.dart';
+import 'word_review_widget.dart';
 
 class VideoExercise extends ConsumerWidget {
   final String videoId;
@@ -143,12 +145,15 @@ class VideoExercise extends ConsumerWidget {
             case ExerciseStage.review:
               if (state.words.isEmpty)
                 return const Center(child: Text("No words!"));
-              return _buildReviewScreen(
-                context,
-                ref,
-                state.words[state.currentIndex],
-                state.currentIndex,
-                state.words.length,
+              return WordReviewWidget(
+                word: state.words[state.currentIndex],
+                index: state.currentIndex,
+                total: state.words.length,
+                onNextWord: () {
+                  ref.read(videoExerciseProvider(videoId).notifier).nextWord();
+                },
+                onClose: () => _handleClose(context, ref),
+                onIKnowThisWord: () {},
               );
 
             case ExerciseStage.quiz:
@@ -305,255 +310,6 @@ class VideoExercise extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildReviewScreen(
-    BuildContext context,
-    WidgetRef ref,
-    DictionaryModel word,
-    int index,
-    int total,
-  ) {
-    return Column(
-      children: [
-        // Header (Close + Progress)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey, size: 28),
-                onPressed: () => _handleClose(context, ref),
-              ),
-              Row(
-                children: List.generate(total > 4 ? 4 : total, (i) {
-                  // Visual simplification for progress dots
-                  bool isActive = i <= (index * 4 / total).floor();
-                  return Container(
-                    width: i == 0 ? 32 : 10,
-                    height: 10,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? AppColors.bambooGreen
-                          : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: isActive
-                            ? AppColors.pandaBlack
-                            : Colors.grey[300]!,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              Text(
-                "${index + 1}/$total",
-                style: TextStyle(
-                  fontFamily: 'Fredoka',
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[400],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Card Content
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: .center,
-                children: [
-                  // Avatar (Optional decorative)
-                  // Skipping absolute positioned avatar from HTML effectively as we are inside a panel
-
-                  // Word Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.pandaBlack, width: 2),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: .center,
-                          children: [
-                            Text(
-                              word.word, // Native/Target? Ideally Target
-                              style: const TextStyle(
-                                fontFamily: 'Fredoka',
-                                fontSize: 32, // Scaled down slightly
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.pandaBlack,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            TtsPlayer(id: word.id, type: 'dictionary'),
-                          ],
-                        ),
-
-                        Text(
-                          word.pronunciation,
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          word.translation, // Or meaning
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.bambooDark,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        const Divider(height: 2, color: Colors.grey),
-                        const SizedBox(height: 16),
-
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: word
-                                    .howToUse, // Assuming definition is here or translation
-                                style: const TextStyle(color: Colors.black87),
-                              ),
-                            ],
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 16,
-                              height: 1.4,
-                            ),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // Bottom Actions
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 15, 16, 0),
-          child: Column(
-            children: [
-              // Next Word
-              PandaButton(
-                text: 'next word',
-                icon: Icons.arrow_forward,
-                height: 50,
-                onPressed: () {
-                  ref.read(videoExerciseProvider(videoId).notifier).nextWord();
-                },
-              ),
-
-              const SizedBox(height: 12),
-
-              // I Know This Word
-              PandaButton(
-                text: 'I know this word',
-                onPressed: () {},
-                backgroundColor: Colors.white,
-                height: 50,
-                borderColor: AppColors.pandaBlack,
-              ),
-
-              const SizedBox(height: 12),
-
-              TextButton(
-                onPressed: () => _handleClose(context, ref),
-                child: const Text(
-                  "Skip Review",
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class ExerciseProgressBar extends StatelessWidget {
-  final int currentIndex;
-  final int total;
-
-  const ExerciseProgressBar({
-    super.key,
-    required this.currentIndex,
-    required this.total,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(total, (index) {
-        final bool isActive = index == currentIndex;
-        final bool isPast = index < currentIndex;
-
-        // Visual states:
-        // Active: Wide, Green, Black Border
-        // Past: Small, Green, Black Border (Completed)
-        // Future: Small, Gray, Gray Border
-
-        final double width = isActive ? 32 : 12;
-        final Color bgColor = (isActive || isPast)
-            ? AppColors.bambooGreen
-            : Colors.grey[200]!;
-        final Color borderColor = (isActive || isPast)
-            ? AppColors.pandaBlack
-            : Colors.grey[300]!;
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          width: width,
-          height: 12,
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: borderColor, width: 2),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: AppColors.pandaBlack.withOpacity(0.1),
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-        );
-      }),
     );
   }
 }

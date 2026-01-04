@@ -76,92 +76,180 @@ class _WordListenWidgetState extends State<WordListenWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        final inAnimation = Tween<Offset>(
+          begin: const Offset(1.0, 0.0),
+          end: Offset.zero,
+        ).animate(animation);
+
+        final outAnimation = Tween<Offset>(
+          begin: const Offset(-1.0, 0.0),
+          end: Offset.zero,
+        ).animate(animation);
+
+        if (child.key == ValueKey(widget.currentWord.id)) {
+          return SlideTransition(position: inAnimation, child: child);
+        } else {
+          return SlideTransition(position: outAnimation, child: child);
+        }
+      },
+      child: Center(
+        key: ValueKey(widget.currentWord.id),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                "Listen and choose the word",
-                style: TextStyle(
-                  fontFamily: 'Fredoka',
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 32),
-              // Large Audio Player
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.pandaBlack, width: 3),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.pandaBlack,
-                      offset: Offset(0, 4),
-                      blurRadius: 0,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        // Main Card
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 50,
+                            horizontal: 24,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.funBg,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: AppColors.pandaBlack,
+                              width: 3,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.pandaBlack,
+                                offset: Offset(4, 4),
+                                blurRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Transform.scale(
+                              scale: 2.0,
+                              child: TtsPlayer(
+                                id: widget.currentWord.id,
+                                type: 'dictionary',
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Top Label
+                        Positioned(
+                          top: -14,
+                          child: Transform.rotate(
+                            angle: -0.02,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.pandaBlack,
+                                  width: 2,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    offset: Offset(0, 2),
+                                    blurRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                "WHAT DID YOU HEAR?",
+                                style: TextStyle(
+                                  fontFamily: 'Fredoka',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.pandaBlack,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                child: Center(
-                  // Assuming TtsPlayer has logic to look good or we wrap it?
-                  // TtsPlayer uses IconButton usually. We might need a bigger icon.
-                  // The TtsPlayer widget is hardcoded to specific size?
-                  // Let's modify TtsPlayer optionally or just use it as is?
-                  // It renders an IconButton or similar.
-                  // If TtsPlayer is just a button, we can center it.
-                  // Ideally we want auto-play.
-                  child: Transform.scale(
-                    scale: 2.0,
-                    child: TtsPlayer(
-                      id: widget.currentWord.id,
-                      type: 'dictionary',
-                      // TODO: Pass autoPlay if available, or just rely on user tap
-                    ),
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 24,
+                ),
+                child: Column(
+                  children: List.generate(_options.length, (index) {
+                    final option = _options[index];
+                    Color bgColor = Colors.white;
+                    Color borderColor = AppColors.pandaBlack;
+
+                    if (_answered) {
+                      if (option.word == widget.currentWord.word) {
+                        bgColor = AppColors.bambooGreen;
+                        borderColor = AppColors.bambooDark;
+                      } else if (index == _selectedIndex) {
+                        bgColor = Colors.red[100]!;
+                        borderColor = Colors.red;
+                      }
+                    }
+
+                    final letter = String.fromCharCode(65 + index);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: PandaButton(
+                        text: option.word,
+                        onPressed: () => _handleOptionTap(index, option.word),
+                        backgroundColor: bgColor,
+                        borderColor: borderColor,
+                        height: 56,
+                        textColor: AppColors.pandaBlack,
+                        shadowOffset: const Offset(0, 2),
+                        leading: Container(
+                          width: 32,
+                          height: 32,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.pandaBlack,
+                              width: 2,
+                            ),
+                          ),
+                          child: Text(
+                            letter,
+                            style: const TextStyle(
+                              fontFamily: 'Fredoka',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.pandaBlack,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
                 ),
               ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Column(
-            children: List.generate(_options.length, (index) {
-              final option = _options[index];
-              Color bgColor = Colors.white;
-              Color borderColor = AppColors.pandaBlack;
-
-              if (_answered) {
-                if (option.word == widget.currentWord.word) {
-                  bgColor = AppColors.bambooGreen;
-                  borderColor = AppColors.bambooDark;
-                } else if (index == _selectedIndex) {
-                  bgColor = Colors.red[100]!;
-                  borderColor = Colors.red;
-                }
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: PandaButton(
-                  text: option.word,
-                  onPressed: () => _handleOptionTap(index, option.word),
-                  backgroundColor: bgColor,
-                  borderColor: borderColor,
-                  height: 56,
-                  textColor: AppColors.pandaBlack,
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

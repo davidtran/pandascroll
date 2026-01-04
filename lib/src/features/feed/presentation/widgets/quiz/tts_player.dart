@@ -77,7 +77,7 @@ class _TtsPlayerState extends State<TtsPlayer> {
     return GestureDetector(
       onTap: _fetchAudio,
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(4),
         decoration: const BoxDecoration(
           color: Colors.transparent,
           shape: BoxShape.circle,

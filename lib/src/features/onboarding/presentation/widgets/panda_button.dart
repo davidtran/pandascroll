@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_dimens.dart';
 
 class PandaButton extends StatefulWidget {
   final String text;
@@ -79,29 +78,38 @@ class _PandaButtonState extends State<PandaButton> {
               ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            if (widget.leading != null) ...[
-              widget.leading!,
-              const SizedBox(width: AppSpacing.sm),
-            ],
-            Text(
-              widget.text,
-              style: TextStyle(
-                color: widget.textColor,
-                fontSize: widget.fontSize,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Fredoka',
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal:
+                    (widget.leading != null ||
+                        widget.trailing != null ||
+                        widget.icon != null)
+                    ? 32.0
+                    : 0,
+              ),
+              child: Text(
+                widget.text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: widget.textColor,
+                  fontSize: widget.fontSize,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Fredoka',
+                ),
               ),
             ),
-            if (widget.trailing != null) ...[
-              const Spacer(),
-              widget.trailing!,
-            ] else if (widget.icon != null) ...[
-              if (widget.text.isNotEmpty) const SizedBox(width: AppSpacing.sm),
-              Icon(widget.icon, color: widget.textColor, size: 28),
-            ],
+            if (widget.leading != null)
+              Align(alignment: Alignment.centerLeft, child: widget.leading!),
+            if (widget.trailing != null)
+              Align(alignment: Alignment.centerRight, child: widget.trailing!)
+            else if (widget.icon != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Icon(widget.icon, color: widget.textColor, size: 28),
+              ),
           ],
         ),
       ),

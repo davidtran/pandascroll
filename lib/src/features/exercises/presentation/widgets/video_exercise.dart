@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
-import 'package:pandascroll/src/features/exercises/presentation/widgets/exercise_progress_bar.dart';
-import 'package:pandascroll/src/features/feed/domain/models/dictionary_model.dart';
 import 'package:pandascroll/src/features/exercises/presentation/controllers/video_exercise_controller.dart';
 import 'dart:ui';
 
-import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_player.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 import 'exercise_picker_widget.dart';
 import 'exercise_review_widget.dart';
-import 'word_quiz_widget.dart';
-import 'word_speak_widget.dart';
-import 'word_write_widget.dart';
 import 'exercise_complete_widget.dart';
 import 'word_review_widget.dart';
+import 'word_game_widget.dart';
 
 class VideoExercise extends ConsumerWidget {
   final String videoId;
@@ -155,54 +150,19 @@ class VideoExercise extends ConsumerWidget {
                 onClose: () => _handleClose(context, ref),
                 onIKnowThisWord: () {},
               );
-
+            case ExerciseStage.listen:
             case ExerciseStage.quiz:
-              return _buildGameWrapper(
-                context,
-                state,
-                WordQuizWidget(
-                  currentWord: state.words[state.currentIndex],
-                  allWords: state.words,
-                  onCorrect: () => ref
-                      .read(videoExerciseProvider(videoId).notifier)
-                      .nextWord(),
-                ),
-                () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
-                    .nextWord(),
-                ref, // Pass ref for close handler
-              );
-
             case ExerciseStage.speak:
-              return _buildGameWrapper(
-                context,
-                state,
-                WordSpeakWidget(
-                  currentWord: state.words[state.currentIndex],
-                  onCorrect: () => ref
-                      .read(videoExerciseProvider(videoId).notifier)
-                      .nextWord(),
-                ),
-                () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
-                    .nextWord(),
-                ref,
-              );
-
             case ExerciseStage.write:
-              return _buildGameWrapper(
-                context,
-                state,
-                WordWriteWidget(
-                  currentWord: state.words[state.currentIndex],
-                  onCorrect: () => ref
-                      .read(videoExerciseProvider(videoId).notifier)
-                      .nextWord(),
-                ),
-                () => ref
+              return WordGameWidget(
+                state: state,
+                onClose: () => _handleClose(context, ref),
+                onNext: () => ref
                     .read(videoExerciseProvider(videoId).notifier)
                     .nextWord(),
-                ref,
+                onSkip: () => ref
+                    .read(videoExerciseProvider(videoId).notifier)
+                    .nextWord(),
               );
 
             case ExerciseStage.completed:
@@ -224,57 +184,6 @@ class VideoExercise extends ConsumerWidget {
           }
         },
       ),
-    );
-  }
-
-  // Wrapper to show progress bar and close button for games
-  Widget _buildGameWrapper(
-    BuildContext context,
-    ExerciseState state,
-    Widget child,
-    VoidCallback onSkip,
-    WidgetRef ref,
-  ) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey, size: 28),
-                onPressed: () => _handleClose(context, ref),
-              ),
-              Expanded(
-                child: Center(
-                  child: ExerciseProgressBar(
-                    currentIndex: state.currentIndex,
-                    total: state.words.length,
-                  ),
-                ),
-              ),
-              // Balance out the close button
-              const SizedBox(width: 48),
-            ],
-          ),
-        ),
-        Expanded(child: child),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 24, top: 8),
-          child: TextButton(
-            onPressed: onSkip,
-            child: const Text(
-              "Skip",
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 

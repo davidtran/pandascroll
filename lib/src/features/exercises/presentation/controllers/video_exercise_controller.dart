@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
+import '../../domain/models/exercise_dictionary_model.dart';
 import '../../domain/models/exercise_response.dart';
-import '../../../feed/domain/models/dictionary_model.dart';
 
 final videoExerciseProvider =
     AsyncNotifierProvider.family<
@@ -23,7 +23,7 @@ enum ExerciseStage {
 }
 
 class ExerciseState {
-  final List<DictionaryModel> words;
+  final List<ExerciseDictionaryModel> words;
   final Map<String, List<String>> wordOptions;
   final int currentIndex;
   final ExerciseStage stage;
@@ -36,7 +36,7 @@ class ExerciseState {
   });
 
   ExerciseState copyWith({
-    List<DictionaryModel>? words,
+    List<ExerciseDictionaryModel>? words,
     Map<String, List<String>>? wordOptions,
     int? currentIndex,
     ExerciseStage? stage,
@@ -118,11 +118,10 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
         break;
       case ExerciseStage.speak:
         state = AsyncValue.data(
-          currentState.copyWith(stage: ExerciseStage.write, currentIndex: 0),
+          currentState.copyWith(stage: ExerciseStage.listen, currentIndex: 0),
         );
         break;
-      case ExerciseStage.write:
-        // All word exercises done.
+      case ExerciseStage.listen:
         state = AsyncValue.data(
           currentState.copyWith(
             stage: ExerciseStage.completed,
@@ -130,6 +129,7 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
           ),
         );
         break;
+
       default:
         break;
     }

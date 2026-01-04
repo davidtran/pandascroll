@@ -1,7 +1,7 @@
-import '../../../feed/domain/models/dictionary_model.dart';
+import 'exercise_dictionary_model.dart';
 
 class ExerciseResponse {
-  final List<DictionaryModel> words;
+  final List<ExerciseDictionaryModel> words;
   final Map<String, List<String>> wordOptions;
 
   ExerciseResponse({required this.words, required this.wordOptions});
@@ -14,7 +14,9 @@ class ExerciseResponse {
 
     return ExerciseResponse(
       words: (data['words'] as List)
-          .map((e) => DictionaryModel.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => ExerciseDictionaryModel.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       wordOptions: Map<String, dynamic>.from(data['word_options'] as Map).map(
         (key, value) =>

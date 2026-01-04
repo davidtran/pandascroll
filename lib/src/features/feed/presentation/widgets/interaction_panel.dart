@@ -40,7 +40,7 @@ class InteractionPanelWidget extends State<InteractionPanel> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final panelHeight = screenHeight * 0.75;
+    final maxPanelHeight = screenHeight * 0.8;
 
     return RepaintBoundary(
       child: Stack(
@@ -58,23 +58,23 @@ class InteractionPanelWidget extends State<InteractionPanel> {
             ),
 
           // Sliding Panel
-          AnimatedPositioned(
+          AnimatedSlide(
+            offset: widget.isVisible ? Offset.zero : const Offset(0, 1),
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            left: 0,
-            right: 0,
-            bottom: widget.isVisible ? 0 : -panelHeight,
-            height: panelHeight,
-            child: _buildPanelContent(),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: _buildPanelContent(maxPanelHeight),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Moved existing content logic to a new private method
-  Widget _buildPanelContent() {
+  Widget _buildPanelContent(double maxHeight) {
     return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -92,6 +92,7 @@ class InteractionPanelWidget extends State<InteractionPanel> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Handle Bar with Swipe to Close
           GestureDetector(
@@ -121,7 +122,7 @@ class InteractionPanelWidget extends State<InteractionPanel> {
             ),
           ),
 
-          Expanded(key: _contentKey, child: widget.child),
+          Flexible(key: _contentKey, child: widget.child),
         ],
       ),
     );

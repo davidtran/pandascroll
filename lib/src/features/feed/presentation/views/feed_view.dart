@@ -14,10 +14,10 @@ import '../widgets/daily_goal/language_level_widget.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../widgets/interaction_panel.dart';
 import '../widgets/video_post.dart';
-import '../widgets/quiz_panel.dart';
-import '../widgets/comments_panel.dart';
 import 'package:pandascroll/src/features/roadmap/presentation/views/roadmap_view.dart';
 import '../../../home/presentation/providers/main_navigation_provider.dart';
+import '../widgets/comments_panel.dart';
+import '../../../exercises/presentation/widgets/video_exercise.dart';
 
 class FeedView extends ConsumerStatefulWidget {
   const FeedView({super.key});
@@ -261,25 +261,9 @@ class _VideoPageFeed extends ConsumerWidget {
             }
 
             onOpenPanel(
-              "Loading...",
-              QuizPanel(
-                videoId: videos[index].id,
-                audioUrl: videos[index].audioUrl,
-                onTitleChanged: onUpdateTitle,
-                onClose: () => onClosePanel(),
-                language: videos[index].language,
-                onNextVideo: () {
-                  onClosePanel();
-                  if (index < videos.length - 1) {
-                    pageController.animateToPage(
-                      index + 1,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
-              ),
-              barrierDismissible: false,
+              "",
+              VideoExercise(videoId: videos[index].id, onClose: onClosePanel),
+              barrierDismissible: true,
             );
           },
           onShowComments: () => onOpenPanel(

@@ -651,31 +651,37 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: widget.hideContent ? 0.0 : 1.0,
-            child: PandaButton(
-              text: "START QUIZ",
-              onPressed: widget.onStartQuiz,
-              disabled: _isTutorialShowing,
-              backgroundColor: AppColors.bambooGreen,
-              textColor: AppColors.pandaBlack,
-              borderColor: AppColors.pandaBlack,
-              icon: null, // We use leading/trailing manually or just leading
-              height: 50,
-              leading: Icon(Icons.quiz, color: AppColors.pandaBlack, size: 28),
-              trailing: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.pandaBlack, width: 2),
-                ),
-                child: const Icon(
-                  Icons.arrow_forward,
-                  size: 18,
+            child: withInterceptor(
+              PandaButton(
+                text: "START QUIZ",
+                onPressed: widget.onStartQuiz,
+                disabled: _isTutorialShowing,
+                backgroundColor: AppColors.bambooGreen,
+                textColor: AppColors.pandaBlack,
+                borderColor: AppColors.pandaBlack,
+                icon: null, // We use leading/trailing manually or just leading
+                height: 50,
+                leading: Icon(
+                  Icons.quiz,
                   color: AppColors.pandaBlack,
+                  size: 28,
                 ),
+                trailing: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.pandaBlack, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    size: 18,
+                    color: AppColors.pandaBlack,
+                  ),
+                ),
+                shadowColor: const Color.fromARGB(255, 38, 38, 38),
               ),
-              shadowColor: const Color.fromARGB(255, 38, 38, 38),
             ),
           ),
         ),

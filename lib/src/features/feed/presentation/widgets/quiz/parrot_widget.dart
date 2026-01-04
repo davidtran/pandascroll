@@ -1,13 +1,12 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
-import '../../../../../core/network/api_client.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_dimens.dart';
+import '../../../../../core/utils/speech_scoring_service.dart';
 import '../../../domain/models/exercise_model.dart';
 
 class ParrotWidget extends StatefulWidget {
@@ -158,16 +157,12 @@ class _ParrotWidgetState extends State<ParrotWidget> {
     setState(() => _isProcessing = true);
 
     try {
-      final data = await ApiClient.upload(
-        '/transcribe',
-        filePath: path,
-        fieldName: 'file',
-        contentType: 'audio/m4a',
-      );
-
-      final text = data['text'] as String? ?? '';
+      final text = await SpeechScoringService.transcribeAudio(path);
       _transcribedText = text; // Store for debugging/display if needed
-      final score = _calculateScore(text, widget.data.sentenceText);
+      final score = SpeechScoringService.calculateScore(
+        text,
+        widget.data.sentenceText,
+      );
       _score = score;
 
       print('score: $score');
@@ -184,49 +179,6 @@ class _ParrotWidgetState extends State<ParrotWidget> {
     } finally {
       setState(() => _isProcessing = false);
     }
-  }
-
-  double _calculateScore(String transcribed, String original) {
-    if (original.isEmpty) return 0.0;
-
-    final normalizedTranscribed = transcribed.toLowerCase().trim();
-    final normalizedOriginal = original.toLowerCase().trim();
-
-    if (normalizedTranscribed.isEmpty) return 0.0;
-
-    final distance = _levenshtein(normalizedTranscribed, normalizedOriginal);
-    final maxLength = max(
-      normalizedTranscribed.length,
-      normalizedOriginal.length,
-    );
-
-    if (maxLength == 0) return 1.0;
-
-    return 1.0 - (distance / maxLength);
-  }
-
-  int _levenshtein(String s, String t) {
-    if (s == t) return 0;
-    if (s.isEmpty) return t.length;
-    if (t.isEmpty) return s.length;
-
-    List<int> v0 = List<int>.filled(t.length + 1, 0);
-    List<int> v1 = List<int>.filled(t.length + 1, 0);
-
-    for (int i = 0; i < t.length + 1; i++) v0[i] = i;
-
-    for (int i = 0; i < s.length; i++) {
-      v1[0] = i + 1;
-
-      for (int j = 0; j < t.length; j++) {
-        int cost = (s[i] == t[j]) ? 0 : 1;
-        v1[j + 1] = min(v1[j] + 1, min(v0[j + 1] + 1, v0[j] + cost));
-      }
-
-      for (int j = 0; j < t.length + 1; j++) v0[j] = v1[j];
-    }
-
-    return v1[t.length];
   }
 
   @override

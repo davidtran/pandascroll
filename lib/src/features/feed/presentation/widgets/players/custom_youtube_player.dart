@@ -16,6 +16,7 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
   final Function(String error)? onError;
   final double? start;
   final double? end;
+  final bool isMuted;
 
   const CustomYouTubePlayerMobile({
     super.key,
@@ -28,6 +29,7 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
     this.seekStream,
     this.start,
     this.end,
+    this.isMuted = false,
   });
 
   @override
@@ -92,6 +94,14 @@ class _CustomYouTubePlayerMobileState
       }
     }
 
+    if (widget.isMuted != oldWidget.isMuted) {
+      if (widget.isMuted) {
+        _mute();
+      } else {
+        _unMute();
+      }
+    }
+
     // Check start/end changes
 
     if (widget.start != oldWidget.start || widget.end != oldWidget.end) {
@@ -113,6 +123,14 @@ class _CustomYouTubePlayerMobileState
 
   void _pause() {
     _webViewController?.evaluateJavascript(source: "pause()");
+  }
+
+  void _mute() {
+    _webViewController?.evaluateJavascript(source: "mute()");
+  }
+
+  void _unMute() {
+    _webViewController?.evaluateJavascript(source: "unMute()");
   }
 
   @override
@@ -253,7 +271,12 @@ playerVars: {
 
 events: {
 
-onReady: function(event) { sendMessageToDart('Ready'); },
+onReady: function(event) { 
+  if (${widget.isMuted}) {
+    event.target.mute();
+  }
+  sendMessageToDart('Ready'); 
+},
 
 onStateChange: function(event) { sendPlayerStateChange(event.data); },
 

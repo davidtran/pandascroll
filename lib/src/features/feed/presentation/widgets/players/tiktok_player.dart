@@ -10,6 +10,7 @@ class TikTokPlayer extends StatefulWidget {
   final Function(double) onCurrentTime;
   final Function(bool) onStateChange; // true: playing, false: paused
   final VoidCallback onEnded;
+  final bool isMuted;
 
   const TikTokPlayer({
     super.key,
@@ -19,6 +20,7 @@ class TikTokPlayer extends StatefulWidget {
     required this.onStateChange,
     required this.onEnded,
     this.seekStream,
+    this.isMuted = false,
   });
 
   final Stream<double>? seekStream;
@@ -46,6 +48,9 @@ class _TikTokPlayerState extends State<TikTokPlayer> {
   void didUpdateWidget(TikTokPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
+      _applyState();
+    }
+    if (widget.isMuted != oldWidget.isMuted) {
       _applyState();
     }
     if (widget.videoId != oldWidget.videoId) {
@@ -181,7 +186,11 @@ class _TikTokPlayerState extends State<TikTokPlayer> {
 
     if (widget.isPlaying) {
       _sendMessage("play");
-      _sendMessage("unMute");
+      if (widget.isMuted) {
+        _sendMessage("mute");
+      } else {
+        _sendMessage("unMute");
+      }
     } else {
       _sendMessage("mute");
       // Don't necessarily force play/pause here, depends on UX.

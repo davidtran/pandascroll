@@ -70,7 +70,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   bool _isPaused = false;
   bool _isNavigatedAway = false;
 
-  bool _isMuted = false;
+  bool _isMuted = kIsWeb; // Default to muted on Web
   bool _xpAwarded = false;
 
   // Window/Chunk State
@@ -475,7 +475,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                   ),
 
                 // 4. Captions Overlay
-                if (widget.video.captions.isNotEmpty)
+                if (widget.video.captions.isNotEmpty && settings.captions)
                   Positioned(
                     left: 16,
                     right: 80,
@@ -555,18 +555,6 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Save (Like)
-                // _buildActionItem(
-                //   Icons.favorite_rounded,
-                //   "Save",
-                //   Colors.white,
-                //   isLike: true,
-                //   onTap: () {
-                //     // Reference implementation logic for like/save
-                //   },
-                // ),
-                // const SizedBox(height: 10),
 
                 // Audio
                 _buildActionItem(
@@ -798,6 +786,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
         seekStream: _seekController.stream,
         start: controlState.start,
         end: controlState.end,
+        isMuted: _isMuted,
       );
     } else {
       return TikTokPlayer(
@@ -807,6 +796,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
         onStateChange: (state) => _onPlayerStateChange(state, windowIndex),
         onEnded: () => _onPlayerEnded(windowIndex),
         seekStream: _seekController.stream,
+        isMuted: _isMuted,
       );
     }
   }

@@ -12,6 +12,7 @@ class YouTubePlayerWeb extends StatefulWidget {
   final Function(String error)? onError;
   final double? start;
   final double? end;
+  final bool isMuted;
 
   const YouTubePlayerWeb({
     super.key,
@@ -24,6 +25,7 @@ class YouTubePlayerWeb extends StatefulWidget {
     this.seekStream,
     this.start,
     this.end,
+    this.isMuted = false,
   });
 
   @override
@@ -57,39 +59,17 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
 
   void _initializeController() {
     _controller = YoutubePlayerController(
-      params: const YoutubePlayerParams(
+      params: YoutubePlayerParams(
         showControls: false,
         showFullscreenButton: false,
         loop: true,
-        mute: true,
+        mute: widget.isMuted,
         enableJavaScript: true,
         pointerEvents: PointerEvents.none,
       ),
     );
 
     _controller.loadVideoById(videoId: widget.videoId);
-
-    // Listen to state changes
-    _subscription = _controller.listen((value) {
-      if (!mounted) return;
-
-      if (value.hasError) {
-        widget.onError?.call(value.error.code.toString());
-      }
-
-      if (value.playerState == PlayerState.ended) {
-        widget.onStateChange(false);
-        widget.onEnded();
-        _stopPositionTimer();
-      } else if (value.playerState == PlayerState.playing) {
-        widget.onStateChange(true);
-        _startPositionTimer();
-      } else if (value.playerState == PlayerState.paused ||
-          value.playerState == PlayerState.unknown) {
-        widget.onStateChange(false);
-        _stopPositionTimer();
-      }
-    });
 
     // Initial check
     if (widget.isPlaying) {
@@ -130,6 +110,15 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
     // Handle Video Change
     if (widget.videoId != oldWidget.videoId) {
       _controller.loadVideoById(videoId: widget.videoId);
+    }
+
+    // Handle Mute Change
+    if (widget.isMuted != oldWidget.isMuted) {
+      if (widget.isMuted) {
+        _controller.mute();
+      } else {
+        _controller.unMute();
+      }
     }
 
     // Handle Play/Pause from Parent

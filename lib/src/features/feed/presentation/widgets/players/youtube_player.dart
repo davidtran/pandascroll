@@ -13,6 +13,7 @@ class YouTubePlayer extends StatelessWidget {
   final Stream<double>? seekStream;
   final double? start;
   final double? end;
+  final bool isMuted;
 
   const YouTubePlayer({
     super.key,
@@ -25,6 +26,7 @@ class YouTubePlayer extends StatelessWidget {
     this.seekStream,
     this.start,
     this.end,
+    this.isMuted = false,
   });
 
   @override
@@ -40,6 +42,7 @@ class YouTubePlayer extends StatelessWidget {
         seekStream: seekStream,
         start: start,
         end: end,
+        isMuted: isMuted,
       );
     }
     return CustomYouTubePlayerMobile(
@@ -52,6 +55,7 @@ class YouTubePlayer extends StatelessWidget {
       seekStream: seekStream,
       start: start,
       end: end,
+      isMuted: isMuted,
     );
   }
 }

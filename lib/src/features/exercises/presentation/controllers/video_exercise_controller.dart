@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/exercise_dictionary_model.dart';
 import '../../domain/models/exercise_response.dart';
+import '../../domain/models/sentence_exercise_model.dart';
 
 final videoExerciseProvider =
     AsyncNotifierProvider.family<
@@ -19,17 +22,23 @@ enum ExerciseStage {
   speak,
   write,
   sentenceReview,
+  sentenceScramble,
+  sentenceSpeak,
+  sentenceDictation,
   completed,
 }
 
 class ExerciseState {
   final List<ExerciseDictionaryModel> words;
+  final List<SentenceExerciseModel> sentences;
   final Map<String, List<String>> wordOptions;
   final int currentIndex;
+
   final ExerciseStage stage;
 
   ExerciseState({
     this.words = const [],
+    this.sentences = const [],
     this.wordOptions = const {},
     this.currentIndex = 0,
     this.stage = ExerciseStage.picker,
@@ -37,12 +46,14 @@ class ExerciseState {
 
   ExerciseState copyWith({
     List<ExerciseDictionaryModel>? words,
+    List<SentenceExerciseModel>? sentences,
     Map<String, List<String>>? wordOptions,
     int? currentIndex,
     ExerciseStage? stage,
   }) {
     return ExerciseState(
       words: words ?? this.words,
+      sentences: sentences ?? this.sentences,
       wordOptions: wordOptions ?? this.wordOptions,
       currentIndex: currentIndex ?? this.currentIndex,
       stage: stage ?? this.stage,
@@ -84,22 +95,53 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
     }
   }
 
-  void startSentenceExercise() {
+  Future<void> startSentenceExercise() async {
     state = AsyncValue.data(
-      state.value!.copyWith(stage: ExerciseStage.sentenceReview),
+      state.value!.copyWith(stage: ExerciseStage.loading),
     );
+    try {
+      final response = await ApiClient.post(
+        '/exercise_prepare_sentence',
+        body: {'video_id': videoId},
+      );
+
+      final data = response['data'] ?? response;
+      final sentences = (data['sentences'] as List)
+          .map((e) => SentenceExerciseModel.fromJson(e))
+          .toList();
+
+      state = AsyncValue.data(
+        state.value!.copyWith(
+          stage: ExerciseStage.sentenceReview,
+          sentences: sentences,
+          currentIndex: 0,
+        ),
+      );
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   void nextWord() {
     final currentState = state.value;
     if (currentState == null) return;
 
-    if (currentState.currentIndex < currentState.words.length - 1) {
+    int totalItems = 0;
+    if (currentState.stage == ExerciseStage.sentenceScramble ||
+        currentState.stage == ExerciseStage.sentenceReview ||
+        currentState.stage == ExerciseStage.sentenceSpeak ||
+        currentState.stage == ExerciseStage.sentenceDictation) {
+      totalItems = currentState.sentences.length;
+    } else {
+      totalItems = currentState.words.length;
+    }
+
+    if (currentState.currentIndex < totalItems - 1) {
       state = AsyncValue.data(
         currentState.copyWith(currentIndex: currentState.currentIndex + 1),
       );
     } else {
-      // End of valid words for this stage, move to next stage
+      // End of valid items for this stage, move to next stage
       _advanceStage(currentState);
     }
   }
@@ -130,14 +172,73 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
         );
         break;
 
+      case ExerciseStage.sentenceReview:
+        state = AsyncValue.data(
+          currentState.copyWith(
+            stage: ExerciseStage.sentenceScramble,
+            currentIndex: 0,
+          ),
+        );
+        break;
+
+      case ExerciseStage.sentenceScramble:
+        state = AsyncValue.data(
+          currentState.copyWith(
+            stage: ExerciseStage.sentenceSpeak,
+            currentIndex: 0,
+          ),
+        );
+        break;
+
+      case ExerciseStage.sentenceSpeak:
+        state = AsyncValue.data(
+          currentState.copyWith(
+            stage: ExerciseStage.sentenceDictation,
+            currentIndex: 0,
+          ),
+        );
+        break;
+
+      case ExerciseStage.sentenceDictation:
+        state = AsyncValue.data(
+          currentState.copyWith(
+            stage: ExerciseStage.completed,
+            currentIndex: 0,
+          ),
+        );
+        break;
+
       default:
         break;
     }
   }
 
+  Future<void> markWordAsKnown(String word, String language) async {
+    final cleanWord = word
+        .trim()
+        .replaceAll(RegExp(r'^[^\w]+|[^\w]+$'), '')
+        .toLowerCase();
+    if (cleanWord.isEmpty) return;
+
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      await Supabase.instance.client.from('user_known_words').upsert({
+        'user_id': userId,
+        'word': cleanWord,
+        'language': language,
+      }, onConflict: 'user_id,word,language');
+
+      nextWord();
+    } catch (e) {
+      debugPrint("Error marking word as known: $e");
+    }
+  }
+
   void skipReview() {
-    // Check current stage and skip to next phase?
-    // Or just next word? Assuming next word for now.
-    nextWord();
+    final currentState = state.value;
+    if (currentState == null) return;
+    _advanceStage(currentState);
   }
 }

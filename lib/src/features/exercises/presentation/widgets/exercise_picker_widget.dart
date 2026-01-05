@@ -288,26 +288,26 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                 ),
               ),
               // XP Badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: widget.xpBgColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: widget.xpColor, width: 2),
-                ),
-                child: Text(
-                  widget.xp,
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    color: widget.xpColor,
-                  ),
-                ),
-              ),
+              // Container(
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 10,
+              //     vertical: 4,
+              //   ),
+              //   decoration: BoxDecoration(
+              //     color: widget.xpBgColor,
+              //     borderRadius: BorderRadius.circular(8),
+              //     border: Border.all(color: widget.xpColor, width: 2),
+              //   ),
+              //   child: Text(
+              //     widget.xp,
+              //     style: TextStyle(
+              //       fontFamily: 'Nunito',
+              //       fontWeight: FontWeight.w900,
+              //       fontSize: 12,
+              //       color: widget.xpColor,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

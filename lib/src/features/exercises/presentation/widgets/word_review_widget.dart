@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/exercise_progress_bar.dart';
-import 'package:pandascroll/src/features/feed/domain/models/dictionary_model.dart';
+import 'package:pandascroll/src/features/exercises/domain/models/exercise_dictionary_model.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_player.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
 class WordReviewWidget extends StatelessWidget {
-  final DictionaryModel word;
+  final ExerciseDictionaryModel word;
   final int index;
   final int total;
   final VoidCallback onNextWord;
   final VoidCallback onClose;
   final VoidCallback onIKnowThisWord;
+  final VoidCallback onSkip;
 
   const WordReviewWidget({
     super.key,
@@ -21,6 +22,7 @@ class WordReviewWidget extends StatelessWidget {
     required this.onNextWord,
     required this.onClose,
     required this.onIKnowThisWord,
+    required this.onSkip,
   });
 
   @override
@@ -124,7 +126,11 @@ class WordReviewWidget extends StatelessWidget {
                                 ),
                                 textAlign: TextAlign.center,
                               ),
-                              TtsPlayer(id: word.id, type: 'dictionary'),
+                              TtsPlayer(
+                                id: word.id,
+                                type: 'dictionary',
+                                autoPlay: true,
+                              ),
                             ],
                           ),
                           Text(
@@ -206,7 +212,7 @@ class WordReviewWidget extends StatelessWidget {
               const SizedBox(height: 12),
 
               TextButton(
-                onPressed: onClose,
+                onPressed: onSkip,
                 child: const Text(
                   "Skip Review",
                   style: TextStyle(

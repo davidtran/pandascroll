@@ -1,25 +1,37 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/exp_badge.dart';
+import 'package:pandascroll/src/features/feed/presentation/providers/paw_provider.dart';
+import 'package:pandascroll/src/features/profile/presentation/providers/profile_providers.dart';
 
-class ExerciseCompleteWidget extends StatefulWidget {
+class ExerciseCompleteWidget extends ConsumerStatefulWidget {
   final VoidCallback onSemesterExercises;
   final VoidCallback onNextVideo;
+  final int correctCount;
+  final String videoId;
 
   const ExerciseCompleteWidget({
     super.key,
     required this.onSemesterExercises,
     required this.onNextVideo,
+    required this.correctCount,
+    required this.videoId,
   });
 
   @override
-  State<ExerciseCompleteWidget> createState() => _ExerciseCompleteWidgetState();
+  ConsumerState<ExerciseCompleteWidget> createState() =>
+      _ExerciseCompleteWidgetState();
 }
 
-class _ExerciseCompleteWidgetState extends State<ExerciseCompleteWidget>
+class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _floatAnimation;
+  final GlobalKey pandaIconKey = GlobalKey();
+  List<OverlayEntry> _flyingEntries = [];
 
   @override
   void initState() {
@@ -35,6 +47,86 @@ class _ExerciseCompleteWidgetState extends State<ExerciseCompleteWidget>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.repeat(reverse: true);
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _handleClaim();
+    });
+  }
+
+  void _handleClaim() {
+    // 1. XP / Panda Animation
+    final pandaTargetKey = ref.read(pandaIconKeyProvider);
+    final RenderBox? pandaTargetBox =
+        pandaTargetKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? pandaStartBox =
+        pandaIconKey.currentContext?.findRenderObject() as RenderBox?;
+
+    int animationsToComplete = 0;
+    int completedAnimations = 0;
+
+    // Check availability of animation targets
+    if (pandaTargetBox != null && pandaStartBox != null) {
+      animationsToComplete += widget.correctCount;
+    }
+
+    void checkCompletion() {
+      completedAnimations++;
+      if (completedAnimations >= animationsToComplete) {
+        // All visual animations done.
+        // Trigger Backend updates
+        if (widget.correctCount > 0) {
+          ref
+              .read(userLanguageProfileProvider.notifier)
+              .addXp(
+                event: 'complete_exercise',
+                value: widget.correctCount.toDouble(),
+                videoId: widget.videoId,
+              );
+        }
+      }
+    }
+
+    // Start Panda Animations
+    if (pandaTargetBox != null && pandaStartBox != null) {
+      final startPos = pandaStartBox.localToGlobal(Offset.zero);
+      final targetPos = pandaTargetBox.localToGlobal(Offset.zero);
+
+      for (int i = 0; i < widget.correctCount; i++) {
+        Future.delayed(Duration(milliseconds: i * 100), () {
+          if (!mounted) return;
+          _spawnFlyingItem(
+            startPos,
+            targetPos,
+            'assets/images/panda.png',
+            onComplete: checkCompletion,
+          );
+        });
+      }
+    }
+  }
+
+  void _spawnFlyingItem(
+    Offset startPos,
+    Offset targetPos,
+    String assetPath, {
+    required VoidCallback onComplete,
+  }) {
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => _FlyingItemAnimation(
+        startPos: startPos,
+        targetPos: targetPos,
+        assetPath: assetPath,
+        onComplete: () {
+          entry.remove();
+          _flyingEntries.remove(entry);
+          onComplete();
+        },
+      ),
+    );
+
+    Overlay.of(context).insert(entry);
+    _flyingEntries.add(entry);
   }
 
   @override
@@ -170,7 +262,7 @@ class _ExerciseCompleteWidgetState extends State<ExerciseCompleteWidget>
         const SizedBox(height: 12),
 
         // Paw Score Badge
-        const ExpBadge(),
+        ExpBadge(pandaKey: pandaIconKey),
 
         const SizedBox(height: 12),
         const Text(
@@ -275,15 +367,7 @@ class _ExerciseCompleteWidgetState extends State<ExerciseCompleteWidget>
                       fontFamily: 'Fredoka',
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isPrimary ? Colors.white : AppColors.pandaBlack,
-                      shadows: isPrimary
-                          ? const [
-                              Shadow(
-                                offset: Offset(1, 1),
-                                color: Colors.black26,
-                              ),
-                            ]
-                          : null,
+                      color: AppColors.pandaBlack,
                     ),
                   ),
                   Text(
@@ -292,9 +376,7 @@ class _ExerciseCompleteWidgetState extends State<ExerciseCompleteWidget>
                       fontFamily: 'Nunito',
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isPrimary
-                          ? Colors.white.withOpacity(0.9)
-                          : Colors.grey,
+                      color: isPrimary ? Colors.black : Colors.grey,
                     ),
                   ),
                 ],
@@ -314,6 +396,82 @@ class _ExerciseCompleteWidgetState extends State<ExerciseCompleteWidget>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FlyingItemAnimation extends StatefulWidget {
+  final Offset startPos;
+  final Offset targetPos;
+  final String assetPath;
+  final VoidCallback onComplete;
+
+  const _FlyingItemAnimation({
+    required this.startPos,
+    required this.targetPos,
+    required this.assetPath,
+    required this.onComplete,
+  });
+
+  @override
+  State<_FlyingItemAnimation> createState() => _FlyingItemAnimationState();
+}
+
+class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  late Animation<double> _scaleAnimation;
+  late double _randomOffset;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    // Randomize path slightly for effect
+    _randomOffset = (Random().nextDouble() - 0.5) * 100;
+
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+
+    // Scale down as it flies away
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.5).animate(_controller);
+
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final currentX =
+            widget.startPos.dx +
+            (widget.targetPos.dx - widget.startPos.dx) * _animation.value +
+            (_randomOffset * sin(_animation.value * pi)); // Arc effect
+
+        final currentY =
+            widget.startPos.dy +
+            (widget.targetPos.dy - widget.startPos.dy) * _animation.value;
+
+        return Positioned(
+          left: currentX,
+          top: currentY,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Image.asset(widget.assetPath, width: 40, height: 40),
+          ),
+        );
+      },
     );
   }
 }

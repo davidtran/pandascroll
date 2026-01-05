@@ -25,6 +25,30 @@ class _TtsPlayerState extends State<TtsPlayer> {
   String? _audioUrl;
   bool _isLoading = false;
   bool _hasError = false;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoPlay) {
+      _fetchAudio();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TtsPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id || oldWidget.type != widget.type) {
+      // Reset state when ID or type changes
+      _audioUrl = null;
+      _hasError = false;
+      _isLoading = false;
+      if (widget.autoPlay) {
+        _fetchAudio();
+      }
+    } else if (widget.autoPlay && !oldWidget.autoPlay && _audioUrl == null) {
+      // If autoPlay triggers later and we don't have URL yet
+      _fetchAudio();
+    }
+  }
 
   Future<void> _fetchAudio() async {
     if (_isLoading) return;

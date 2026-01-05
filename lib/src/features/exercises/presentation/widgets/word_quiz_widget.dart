@@ -1,13 +1,15 @@
+import 'package:pandascroll/src/features/exercises/domain/models/exercise_dictionary_model.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_player.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/feed/domain/models/dictionary_model.dart';
+import 'package:pandascroll/src/features/exercises/presentation/widgets/question_widget.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
 class WordQuizWidget extends StatefulWidget {
-  final DictionaryModel currentWord;
-  final List<DictionaryModel> allWords;
+  final ExerciseDictionaryModel currentWord;
+  final List<ExerciseDictionaryModel> allWords;
   final VoidCallback onCorrect;
 
   const WordQuizWidget({
@@ -118,114 +120,45 @@ class _WordQuizWidgetState extends State<WordQuizWidget> {
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              QuestionWidget(
+                title: "WHAT DOES THIS MEAN?",
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Question Box
-                    Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Main Content Box
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppColors.funBg,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
+                        Flexible(
+                          child: Text(
+                            widget.currentWord.word,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Fredoka',
+                              fontSize: 40,
+                              fontWeight: FontWeight.w900,
                               color: AppColors.pandaBlack,
-                              width: 3,
+                              height: 1.2,
                             ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: AppColors.pandaBlack,
-                                offset: Offset(4, 4),
-                                blurRadius: 0,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      widget.currentWord.word,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontFamily: 'Fredoka',
-                                        fontSize: 40,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.pandaBlack,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // Styled Audio Button
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.pandaBlack,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: TtsPlayer(
-                                        id: widget.currentWord.id,
-                                        type: 'dictionary',
-                                        size: 24,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ),
                         ),
-                        // Floating Label
-                        Positioned(
-                          top: -14,
-                          child: Transform.rotate(
-                            angle: -0.02, // ~1 degree tilt
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppColors.pandaBlack,
-                                  width: 2,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    offset: Offset(0, 2),
-                                    blurRadius: 0,
-                                  ),
-                                ],
-                              ),
-                              child: const Text(
-                                "WHAT DOES THIS MEAN?",
-                                style: TextStyle(
-                                  fontFamily: 'Fredoka', // Or system font
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.pandaBlack,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
+                        const SizedBox(width: 12),
+                        // Styled Audio Button
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.pandaBlack,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: TtsPlayer(
+                              id: widget.currentWord.id,
+                              type: 'dictionary',
+                              size: 24,
+                              autoPlay: true,
                             ),
                           ),
                         ),

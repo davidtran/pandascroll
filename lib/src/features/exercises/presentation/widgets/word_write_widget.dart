@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
-import 'package:pandascroll/src/features/feed/domain/models/dictionary_model.dart';
+import 'package:pandascroll/src/features/exercises/domain/models/exercise_dictionary_model.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_player.dart';
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 
 class WordWriteWidget extends StatefulWidget {
-  final DictionaryModel currentWord;
+  final ExerciseDictionaryModel currentWord;
   final VoidCallback onCorrect;
 
   const WordWriteWidget({

@@ -10,6 +10,8 @@ class YouTubePlayerWeb extends StatefulWidget {
   final VoidCallback onEnded;
   final Stream<double>? seekStream;
   final Function(String error)? onError;
+  final double? start;
+  final double? end;
 
   const YouTubePlayerWeb({
     super.key,
@@ -20,6 +22,8 @@ class YouTubePlayerWeb extends StatefulWidget {
     required this.onEnded,
     this.onError,
     this.seekStream,
+    this.start,
+    this.end,
   });
 
   @override
@@ -95,12 +99,22 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
 
   void _startPositionTimer() {
     _positionTimer?.cancel();
-    _positionTimer = Timer.periodic(const Duration(milliseconds: 200), (
+    _positionTimer = Timer.periodic(const Duration(milliseconds: 100), (
       _,
     ) async {
       if (!mounted) return;
       final position = await _controller.currentTime;
       widget.onCurrentTime(position);
+
+      // Segment loop logic
+      if (widget.start != null && widget.end != null) {
+        if (position >= widget.end!) {
+          _controller.seekTo(seconds: widget.start!, allowSeekAhead: true);
+        } else if (position < widget.start! - 2.0) {
+          // Tolerance
+          _controller.seekTo(seconds: widget.start!, allowSeekAhead: true);
+        }
+      }
     });
   }
 
@@ -126,6 +140,13 @@ class _YouTubePlayerWebState extends State<YouTubePlayerWeb> {
       } else {
         _controller.pauseVideo();
         _stopPositionTimer();
+      }
+    }
+
+    if (widget.start != oldWidget.start || widget.end != oldWidget.end) {
+      // If start changed and we are ready, maybe seek to start?
+      if (widget.start != null && widget.isPlaying) {
+        _controller.seekTo(seconds: widget.start!, allowSeekAhead: true);
       }
     }
   }

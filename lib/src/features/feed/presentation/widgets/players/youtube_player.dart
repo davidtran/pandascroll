@@ -1,12 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/players/custom_youtube_player.dart';
-
-// Conditionally import the correct implementation?
-// Or just import both and switch at runtime (assuming packages don't conflict at compile time).
-// Since both are normal packages, we can import them.
-import 'youtube_player_mobile.dart';
-import 'youtube_player_web.dart';
+import 'package:pandascroll/src/features/feed/presentation/widgets/players/youtube_player_web.dart';
 
 class YouTubePlayer extends StatelessWidget {
   final String videoId;
@@ -16,6 +11,8 @@ class YouTubePlayer extends StatelessWidget {
   final VoidCallback onEnded;
   final Function(String error)? onError;
   final Stream<double>? seekStream;
+  final double? start;
+  final double? end;
 
   const YouTubePlayer({
     super.key,
@@ -26,10 +23,25 @@ class YouTubePlayer extends StatelessWidget {
     required this.onEnded,
     this.onError,
     this.seekStream,
+    this.start,
+    this.end,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return YouTubePlayerWeb(
+        videoId: videoId,
+        isPlaying: isPlaying,
+        onCurrentTime: onCurrentTime,
+        onStateChange: onStateChange,
+        onEnded: onEnded,
+        onError: onError,
+        seekStream: seekStream,
+        start: start,
+        end: end,
+      );
+    }
     return CustomYouTubePlayerMobile(
       videoId: videoId,
       isPlaying: isPlaying,
@@ -38,6 +50,8 @@ class YouTubePlayer extends StatelessWidget {
       onEnded: onEnded,
       onError: onError,
       seekStream: seekStream,
+      start: start,
+      end: end,
     );
   }
 }

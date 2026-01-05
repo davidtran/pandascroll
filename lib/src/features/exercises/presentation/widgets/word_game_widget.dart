@@ -6,8 +6,12 @@ import 'package:pandascroll/src/features/exercises/presentation/widgets/word_lis
 import 'package:pandascroll/src/features/exercises/presentation/widgets/word_quiz_widget.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/word_speak_widget.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/word_write_widget.dart';
+import 'package:pandascroll/src/features/exercises/presentation/widgets/sentence_scramble_widget.dart';
+import 'package:pandascroll/src/features/exercises/presentation/widgets/sentence_speak_widget.dart';
+import 'package:pandascroll/src/features/exercises/presentation/widgets/sentence_dictation_widget.dart';
 
 class WordGameWidget extends ConsumerWidget {
+  final String videoId;
   final ExerciseState state;
   final VoidCallback onClose;
   final VoidCallback onNext;
@@ -15,6 +19,7 @@ class WordGameWidget extends ConsumerWidget {
 
   const WordGameWidget({
     super.key,
+    required this.videoId,
     required this.state,
     required this.onClose,
     required this.onNext,
@@ -29,6 +34,7 @@ class WordGameWidget extends ConsumerWidget {
       case ExerciseStage.listen:
         print('start listen game');
         gameContent = WordListenWidget(
+          videoId: videoId,
           currentWord: state.words[state.currentIndex],
           allWords: state.words,
           onCorrect: onNext,
@@ -53,6 +59,27 @@ class WordGameWidget extends ConsumerWidget {
           onCorrect: onNext,
         );
         break;
+      case ExerciseStage.sentenceScramble:
+        gameContent = SentenceScrambleWidget(
+          videoId: videoId,
+          sentence: state.sentences[state.currentIndex],
+          onCorrect: onNext,
+        );
+        break;
+      case ExerciseStage.sentenceSpeak:
+        gameContent = SentenceSpeakWidget(
+          videoId: videoId,
+          sentence: state.sentences[state.currentIndex],
+          onCorrect: onNext,
+        );
+        break;
+      case ExerciseStage.sentenceDictation:
+        gameContent = SentenceDictationWidget(
+          videoId: videoId,
+          sentence: state.sentences[state.currentIndex],
+          onCorrect: onNext,
+        );
+        break;
       default:
         return const SizedBox();
     }
@@ -71,7 +98,11 @@ class WordGameWidget extends ConsumerWidget {
                 child: Center(
                   child: ExerciseProgressBar(
                     currentIndex: state.currentIndex,
-                    total: state.words.length,
+                    total:
+                        (state.stage == ExerciseStage.sentenceScramble ||
+                            state.stage == ExerciseStage.sentenceSpeak)
+                        ? state.sentences.length
+                        : state.words.length,
                   ),
                 ),
               ),

@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/exercises/presentation/controllers/video_exercise_controller.dart';
+import 'package:pandascroll/src/features/feed/presentation/controllers/video_controller.dart';
 import 'dart:ui';
 
 import 'package:pandascroll/src/features/onboarding/presentation/widgets/panda_button.dart';
 import 'exercise_picker_widget.dart';
-import 'exercise_review_widget.dart';
 import 'exercise_complete_widget.dart';
 import 'word_review_widget.dart';
+import 'sentence_review_widget.dart';
 import 'word_game_widget.dart';
 
 class VideoExercise extends ConsumerWidget {
@@ -148,13 +149,38 @@ class VideoExercise extends ConsumerWidget {
                   ref.read(videoExerciseProvider(videoId).notifier).nextWord();
                 },
                 onClose: () => _handleClose(context, ref),
-                onIKnowThisWord: () {},
+                onSkip: () => ref
+                    .read(videoExerciseProvider(videoId).notifier)
+                    .skipReview(),
+                onIKnowThisWord: () async {
+                  final videos = ref.read(videoFeedProvider).videos;
+                  final video = videos.firstWhere((v) => v.id == videoId);
+                  final word = state.words[state.currentIndex].word;
+
+                  await ref
+                      .read(videoExerciseProvider(videoId).notifier)
+                      .markWordAsKnown(word, video.language);
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Word marked as known. It won't appear in future exercises.",
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        backgroundColor: Colors.amberAccent,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
               );
             case ExerciseStage.listen:
             case ExerciseStage.quiz:
             case ExerciseStage.speak:
             case ExerciseStage.write:
               return WordGameWidget(
+                videoId: videoId,
                 state: state,
                 onClose: () => _handleClose(context, ref),
                 onNext: () => ref
@@ -173,14 +199,42 @@ class VideoExercise extends ConsumerWidget {
                       .startSentenceExercise();
                 },
                 onNextVideo: () => _handleClose(context, ref),
+                correctCount: 10,
+                videoId: videoId,
               );
 
             case ExerciseStage.sentenceReview:
-              return ExerciseReviewWidget(
+              if (state.sentences.isEmpty) {
+                return const Center(child: Text("No sentences loaded!"));
+              }
+              return SentenceReviewWidget(
+                videoId: videoId,
+                sentence: state.sentences[state.currentIndex],
+                index: state.currentIndex,
+                total: state.sentences.length,
+                onNext: () => ref
+                    .read(videoExerciseProvider(videoId).notifier)
+                    .nextWord(),
                 onClose: () => _handleClose(context, ref),
               );
-            default:
-              return const SizedBox();
+            case ExerciseStage
+                .sentenceScramble: // [NEW] sentence exercise logic
+            case ExerciseStage.sentenceSpeak:
+            case ExerciseStage.sentenceDictation:
+              if (state.sentences.isEmpty) {
+                return const Center(child: Text("No sentences loaded!"));
+              }
+              return WordGameWidget(
+                videoId: videoId,
+                state: state,
+                onClose: () => _handleClose(context, ref),
+                onNext: () => ref
+                    .read(videoExerciseProvider(videoId).notifier)
+                    .nextWord(),
+                onSkip: () => ref
+                    .read(videoExerciseProvider(videoId).notifier)
+                    .nextWord(),
+              );
           }
         },
       ),
@@ -209,7 +263,7 @@ class VideoExercise extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            "Finding more lessons...",
+            "Please wait...",
             style: TextStyle(
               fontFamily: 'Fredoka',
               fontSize: 20,

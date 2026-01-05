@@ -38,9 +38,12 @@ class _YouTubePlayerMobileState extends State<YouTubePlayerMobile> {
     _initializeController();
     _seekSubscription = widget.seekStream?.listen((seconds) {
       if (_isPlayerReady && mounted) {
-        final currentPos = _controller.value.position;
-        final newPos = currentPos + Duration(seconds: seconds);
-        _controller.seekTo(newPos);
+        // If seconds is negative, it's relative seek back?
+        // Or we can say: if we want to seek to X, passing X - current is hard due to async.
+        // Let's assume for now we change the contract: if we want to seek, we pass the ABSOLUTE seconds if a flag is set?
+        // No, let's just make it absolute.
+        // CHECK existing usages!
+        _controller.seekTo(Duration(seconds: seconds));
       }
     });
   }

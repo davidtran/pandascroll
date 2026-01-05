@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ExpBadge extends StatelessWidget {
-  const ExpBadge({super.key});
+  final GlobalKey pandaKey;
+
+  const ExpBadge({super.key, required this.pandaKey});
 
   // Colors extracted from your tailwind config
   static const Color pandaBlack = Color(0xFF2D2D2D);
@@ -47,24 +49,21 @@ class ExpBadge extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min, // Hug content
               children: [
-                const Icon(Icons.pets, color: Colors.white, size: 28),
+                Image.asset(
+                  'assets/images/paw.png',
+                  width: 28,
+                  height: 28,
+                  key: pandaKey,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   "Exp +10!",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 24,
                     fontWeight: FontWeight.w900, // font-black
-                    fontFamily: 'Nunito', // Or your app's font
+                    fontFamily: 'Fredoka', // Or your app's font
                     letterSpacing: 0.5, // tracking-wide
-                    shadows: [
-                      // Replicates "text-shadow-sm"
-                      Shadow(
-                        offset: const Offset(1, 1),
-                        blurRadius: 0,
-                        color: pandaBlack.withOpacity(0.5),
-                      ),
-                    ],
                   ),
                 ),
               ],

@@ -14,6 +14,8 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
   final VoidCallback onEnded;
   final Stream<double>? seekStream;
   final Function(String error)? onError;
+  final double? start;
+  final double? end;
 
   const CustomYouTubePlayerMobile({
     super.key,
@@ -24,6 +26,8 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
     required this.onEnded,
     this.onError,
     this.seekStream,
+    this.start,
+    this.end,
   });
 
   @override
@@ -34,14 +38,19 @@ class CustomYouTubePlayerMobile extends ConsumerStatefulWidget {
 class _CustomYouTubePlayerMobileState
     extends ConsumerState<CustomYouTubePlayerMobile> {
   InAppWebViewController? _webViewController;
+
   bool _isPlayerReady = false;
+
   // Use a local variable to control visual visibility, but override with provider loading
+
   bool _isThumbnailVisible = true;
+
   StreamSubscription? _seekSubscription;
 
   @override
   void initState() {
     super.initState();
+
     _seekSubscription = widget.seekStream?.listen((seconds) {
       if (_isPlayerReady && mounted) {
         _seekTo(seconds);
@@ -61,6 +70,7 @@ class _CustomYouTubePlayerMobileState
 
     if (widget.seekStream != oldWidget.seekStream) {
       _seekSubscription?.cancel();
+
       _seekSubscription = widget.seekStream?.listen((seconds) {
         if (_isPlayerReady && mounted) {
           _seekTo(seconds);
@@ -70,6 +80,7 @@ class _CustomYouTubePlayerMobileState
 
     if (widget.videoId != oldWidget.videoId) {
       _loadVideo(widget.videoId);
+
       _isThumbnailVisible = true; // Reset thumbnail on video change
     }
 
@@ -78,6 +89,16 @@ class _CustomYouTubePlayerMobileState
         _play();
       } else {
         _pause();
+      }
+    }
+
+    // Check start/end changes
+
+    if (widget.start != oldWidget.start || widget.end != oldWidget.end) {
+      // If start changed and we are ready, maybe seek to start?
+
+      if (widget.start != null && _isPlayerReady) {
+        _seekTo(widget.start!);
       }
     }
   }
@@ -97,6 +118,7 @@ class _CustomYouTubePlayerMobileState
   @override
   void dispose() {
     _seekSubscription?.cancel();
+
     super.dispose();
   }
 
@@ -106,152 +128,300 @@ class _CustomYouTubePlayerMobileState
 
   String get _playerHtml =>
       '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            html,
-            body {
-                margin: 0;
-                padding: 0;
-                background-color: #000000;
-                overflow: hidden;
-                position: fixed;
-                height: 100%;
-                width: 100%;
-                pointer-events: none;
-            }
-        </style>
-        <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>
-    </head>
-    <body>
-        <div id="player"></div>
-        <script>
-            var tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            var firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-            var player;
-            var timerId;
-            var isWeb = ${kIsWeb};
 
-            function onYouTubeIframeAPIReady() {
-                if (isWeb) {
-                     initPlayer();
-                } else {
-                    if (window.flutter_inappwebview) {
-                        initPlayer();
-                    } else {
-                        window.addEventListener('flutterInAppWebViewPlatformReady', function(event) {
-                            initPlayer();
-                        });
-                    }
-                }
-            }
+<!DOCTYPE html>
 
-            function initPlayer() {
-                player = new YT.Player('player', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: '${widget.videoId}',
-                    playerVars: {
-                        'controls': 0,
-                        'playsinline': 1,
-                        'enablejsapi': 1,
-                        'fs': 0,
-                        'rel': 0,
-                        'showinfo': 0,
-                        'iv_load_policy': 3,
-                        'modestbranding': 1,
-                        'cc_lang_pref': 'en',
-                        'loop': 1,
-                        'autoplay': ${boolean(value: widget.isPlaying)},
-                    },
-                    events: {
-                        onReady: function(event) { sendMessageToDart('Ready'); },
-                        onStateChange: function(event) { sendPlayerStateChange(event.data); },
-                        onPlaybackQualityChange: function(event) { sendMessageToDart('PlaybackQualityChange', event.data); },
-                        onPlaybackRateChange: function(event) { sendMessageToDart('PlaybackRateChange', event.data); },
-                        onError: function(error) { sendMessageToDart('Errors', error.data); }
-                    },
-                });
-            }
+<html>
 
-            function sendMessageToDart(handlerName, ...args) {
-                if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-                    window.flutter_inappwebview.callHandler(handlerName, ...args);
-                } else {
-                    // Fallback for Web/Missing Bridge
-                    console.log(JSON.stringify({
-                        'handler': handlerName,
-                        'args': args
-                    }));
-                }
-            }
+<head>
 
-            function sendPlayerStateChange(playerState) {
-                clearTimeout(timerId);
-                sendMessageToDart('StateChange', playerState);
-                if (playerState == 1) {
-                    startSendCurrentTimeInterval();
-                    sendVideoData(player);
-                }
-            }
+<style>
 
-            function sendVideoData(player) {
-                var videoData = {
-                    'duration': player.getDuration(),
-                    'title': player.getVideoData().title,
-                    'author': player.getVideoData().author,
-                    'videoId': player.getVideoData().video_id
-                };
-                sendMessageToDart('VideoData', videoData);
-            }
+html,
 
-            function startSendCurrentTimeInterval() {
-                timerId = setInterval(function () {
-                     sendMessageToDart('VideoTime', player.getCurrentTime(), player.getVideoLoadedFraction());
-                }, 100);
-            }
+body {
 
-            function play() {
-                if (player && typeof player.playVideo === 'function') {
-                    player.playVideo();
-                }
-                return '';
-            }
+margin: 0;
 
-            function pause() {
-                if (player && typeof player.pauseVideo === 'function') {
-                    player.pauseVideo();
-                }
-                return '';
-            }
+padding: 0;
 
-            function loadById(videoId) {
-                if (player && typeof player.loadVideoById === 'function') {
-                    player.loadVideoById({videoId});
-                }
-                return '';
-            }
+background-color: #000000;
 
-            function seekTo(position, seekAhead) {
-                if (player && typeof player.seekTo === 'function') {
-                    player.seekTo(position, seekAhead);
-                }
-                return '';
-            }
+overflow: hidden;
 
-            function setSize(width, height) {
-                if (player && typeof player.setSize === 'function') {
-                    player.setSize(width, height);
-                }
-                return '';
-            }
-        </script>
-    </body>
-    </html>
-  ''';
+position: fixed;
+
+height: 100%;
+
+width: 100%;
+
+pointer-events: none;
+
+}
+
+</style>
+
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>
+
+</head>
+
+<body>
+
+<div id="player"></div>
+
+<script>
+
+var tag = document.createElement('script');
+
+tag.src = "https://www.youtube.com/iframe_api";
+
+var firstScriptTag = document.getElementsByTagName('script')[0];
+
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+var player;
+
+var timerId;
+
+var isWeb = ${kIsWeb};
+
+
+
+function onYouTubeIframeAPIReady() {
+
+if (isWeb) {
+
+initPlayer();
+
+} else {
+
+if (window.flutter_inappwebview) {
+
+initPlayer();
+
+} else {
+
+window.addEventListener('flutterInAppWebViewPlatformReady', function(event) {
+
+initPlayer();
+
+});
+
+}
+
+}
+
+}
+
+
+
+function initPlayer() {
+
+player = new YT.Player('player', {
+
+height: '100%',
+
+width: '100%',
+
+videoId: '${widget.videoId}',
+
+playerVars: {
+
+'controls': 0,
+
+'playsinline': 1,
+
+'enablejsapi': 1,
+
+'fs': 0,
+
+'rel': 0,
+
+'showinfo': 0,
+
+'iv_load_policy': 3,
+
+'modestbranding': 1,
+
+'cc_lang_pref': 'en',
+
+'loop': 1,
+
+'autoplay': ${boolean(value: widget.isPlaying)},
+
+},
+
+events: {
+
+onReady: function(event) { sendMessageToDart('Ready'); },
+
+onStateChange: function(event) { sendPlayerStateChange(event.data); },
+
+onPlaybackQualityChange: function(event) { sendMessageToDart('PlaybackQualityChange', event.data); },
+
+onPlaybackRateChange: function(event) { sendMessageToDart('PlaybackRateChange', event.data); },
+
+onError: function(error) { sendMessageToDart('Errors', error.data); }
+
+},
+
+});
+
+}
+
+
+
+function sendMessageToDart(handlerName, ...args) {
+
+if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+
+window.flutter_inappwebview.callHandler(handlerName, ...args);
+
+} else {
+
+// Fallback for Web/Missing Bridge
+
+// Using a prefix allows us to filter out other console noise
+
+console.log("JSON_MESSAGE:" + JSON.stringify({
+
+'handler': handlerName,
+
+'args': args
+
+}));
+
+}
+
+}
+
+
+
+function sendPlayerStateChange(playerState) {
+
+clearTimeout(timerId);
+
+sendMessageToDart('StateChange', playerState);
+
+if (playerState == 1) {
+
+startSendCurrentTimeInterval();
+
+sendVideoData(player);
+
+}
+
+}
+
+
+
+function sendVideoData(player) {
+
+var videoData = {
+
+'duration': player.getDuration(),
+
+'title': player.getVideoData().title,
+
+'author': player.getVideoData().author,
+
+'videoId': player.getVideoData().video_id
+
+};
+
+sendMessageToDart('VideoData', videoData);
+
+}
+
+
+
+function startSendCurrentTimeInterval() {
+
+timerId = setInterval(function () {
+
+sendMessageToDart('VideoTime', player.getCurrentTime(), player.getVideoLoadedFraction());
+
+}, 100);
+
+}
+
+
+
+function play() {
+
+if (player && typeof player.playVideo === 'function') {
+
+player.playVideo();
+
+}
+
+return '';
+
+}
+
+
+
+function pause() {
+
+if (player && typeof player.pauseVideo === 'function') {
+
+player.pauseVideo();
+
+}
+
+return '';
+
+}
+
+
+
+function loadById(videoId) {
+
+if (player && typeof player.loadVideoById === 'function') {
+
+player.loadVideoById({videoId});
+
+}
+
+return '';
+
+}
+
+
+
+function seekTo(position, seekAhead) {
+
+if (player && typeof player.seekTo === 'function') {
+
+player.seekTo(position, seekAhead);
+
+}
+
+return '';
+
+}
+
+
+
+function setSize(width, height) {
+
+if (player && typeof player.setSize === 'function') {
+
+player.setSize(width, height);
+
+}
+
+return '';
+
+}
+
+</script>
+
+</body>
+
+</html>
+
+''';
 
   void _handleJsMessage(String handlerName, List<dynamic> args) {
     if (!mounted) return;
@@ -261,55 +431,99 @@ class _CustomYouTubePlayerMobileState
         setState(() {
           _isPlayerReady = true;
         });
+
         // Only play if ready
+
         if (widget.isPlaying) {
           _play();
         } else {
           _pause();
         }
+
         break;
+
       case 'StateChange':
         if (args.isEmpty) return;
+
         final state = args.first as int;
+
         switch (state) {
           case 0:
             widget.onEnded();
+
             // Only loop if ready
+
             _play();
+
             break;
+
           case 1:
             widget.onStateChange(true);
+
             // Start playing
+
             // Hide thumbnail on first play
+
             if (mounted) {
               // Only remove thumbnail if not forced loading
+
               setState(() {
                 _isThumbnailVisible = false;
               });
             }
+
             break;
+
           case 2:
             widget.onStateChange(false);
+
             break;
         }
+
         break;
+
       case 'VideoTime':
         if (args.isEmpty) return;
+
         final position = args.first;
+
         if (position is num) {
-          widget.onCurrentTime(position.toDouble());
+          final time = position.toDouble();
+
+          widget.onCurrentTime(time);
+
+          // Segment Loop Logic
+
+          if (widget.start != null && widget.end != null) {
+            if (time >= widget.end!) {
+              _seekTo(widget.start!);
+            } else if (time < widget.start! - 2.0) {
+              // Tolerance
+
+              _seekTo(widget.start!);
+            }
+          }
         }
+
         break;
+
       case 'Errors':
         if (args.isEmpty) return;
+
         print('on error ${args.first}');
+
         widget.onError?.call(args.first.toString());
+
         break;
 
       // Helpers mostly for debug/other data
+
       case 'VideoData':
+
         // Handle metadata if needed
+
         break;
+
       case 'PlaybackQualityChange':
       case 'PlaybackRateChange':
         break;
@@ -323,35 +537,63 @@ class _CustomYouTubePlayerMobileState
         InAppWebView(
           initialData: InAppWebViewInitialData(
             data: _playerHtml,
+
             encoding: 'utf-8',
+
             baseUrl: WebUri.uri(Uri.https('youtube-nocookie.com')),
+
             mimeType: 'text/html',
           ),
+
           initialSettings: InAppWebViewSettings(
             userAgent: userAgent,
+
             mediaPlaybackRequiresUserGesture: false,
+
             transparentBackground: false,
+
             disableContextMenu: true,
+
             supportZoom: false,
+
             disableHorizontalScroll: false,
+
             disableVerticalScroll: false,
+
             allowsInlineMediaPlayback: true,
+
             allowsAirPlayForMediaPlayback: true,
+
             allowsPictureInPictureMediaPlayback: true,
+
             useWideViewPort: false,
+
             useHybridComposition: true,
           ),
+
           onConsoleMessage: (controller, consoleMessage) {
             // Handle Web fallback or generic debug
+
             if (kIsWeb) {
               try {
-                final message = consoleMessage.message;
+                var message = consoleMessage.message;
+
+                // Check if it is our prefixed message
+
+                if (message.startsWith("JSON_MESSAGE:")) {
+                  message = message.substring("JSON_MESSAGE:".length);
+                }
+
                 // Simple check to ensure it looks like JSON we sent
+
                 if (message.startsWith('{') && message.contains('"handler"')) {
                   final data = jsonDecode(message);
+
                   if (data is Map && data.containsKey('handler')) {
                     final handler = data['handler'] as String;
+
                     final args = (data['args'] as List?) ?? [];
+
                     _handleJsMessage(handler, args);
                   }
                 }
@@ -360,58 +602,72 @@ class _CustomYouTubePlayerMobileState
               }
             }
           },
+
           onWebViewCreated: (webController) {
             _webViewController = webController;
 
             // Only add JS Handlers on Mobile
+
             if (!kIsWeb) {
               webController
                 ..addJavaScriptHandler(
                   handlerName: 'Ready',
+
                   callback: (_) => _handleJsMessage('Ready', []),
                 )
                 ..addJavaScriptHandler(
                   handlerName: 'StateChange',
+
                   callback: (args) => _handleJsMessage('StateChange', args),
                 )
                 ..addJavaScriptHandler(
                   handlerName: 'VideoTime',
+
                   callback: (args) => _handleJsMessage('VideoTime', args),
                 )
                 ..addJavaScriptHandler(
                   handlerName: 'Errors',
+
                   callback: (args) => _handleJsMessage('Errors', args),
                 )
                 ..addJavaScriptHandler(
                   handlerName: 'VideoData',
+
                   callback: (args) => _handleJsMessage('VideoData', args),
                 )
                 ..addJavaScriptHandler(
                   handlerName: 'PlaybackQualityChange',
+
                   callback: (args) =>
                       _handleJsMessage('PlaybackQualityChange', args),
                 )
                 ..addJavaScriptHandler(
                   handlerName: 'PlaybackRateChange',
+
                   callback: (args) =>
                       _handleJsMessage('PlaybackRateChange', args),
                 );
             }
           },
         ),
+
         // Cover loading states (either player init OR translation loading)
         if (_isThumbnailVisible)
           Positioned.fill(
             child: Stack(
               fit: StackFit.expand,
+
               children: [
                 // If thumbnail is still valid (player not started), show it. Use black if not.
                 Image.network(
                   'https://img.youtube.com/vi/${widget.videoId}/sddefault.jpg',
+
                   fit: BoxFit.cover,
+
                   errorBuilder: (context, error, stackTrace) =>
                       Container(color: Colors.black),
                 ),
+
                 // Loader
                 const Center(
                   child: CircularProgressIndicator(

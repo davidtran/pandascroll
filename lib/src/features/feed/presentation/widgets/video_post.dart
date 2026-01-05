@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../providers/video_translations_provider.dart';
+import '../providers/video_player_control_provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../subscription/presentation/views/upgrade_view.dart';
@@ -309,6 +310,7 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   }
 
   bool _isVideoLoaded = false;
+  VideoPlayerControlState controlState = VideoPlayerControlState();
 
   void _onPlayerStateChange(bool isPlaying, int index) {
     if (index != _currentWindowIndex)
@@ -368,6 +370,9 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    controlState = ref.watch(
+      videoPlayerControlProvider(widget.video.id),
+    ); // Use widget.video.id for provider family key
 
     // Effective playing state:
     // 1. Must be the active video (widget.isPlaying)
@@ -781,6 +786,8 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
         onEnded: () => _onPlayerEnded(windowIndex),
         onError: (err) => _onPlayerError(err, windowIndex),
         seekStream: _seekController.stream,
+        start: controlState.start,
+        end: controlState.end,
       );
     } else {
       return TikTokPlayer(

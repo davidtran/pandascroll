@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
+import 'package:pandascroll/src/features/exercises/presentation/widgets/question_widget.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/speaker_button.dart';
-import 'package:pandascroll/src/features/feed/domain/models/dictionary_model.dart';
+import 'package:pandascroll/src/features/exercises/domain/models/exercise_dictionary_model.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/quiz_feedback_sheet.dart';
 import 'package:pandascroll/src/features/feed/presentation/widgets/quiz/tts_player.dart';
 
 class WordSpeakWidget extends StatefulWidget {
-  final DictionaryModel currentWord;
+  final ExerciseDictionaryModel currentWord;
   final VoidCallback onCorrect;
 
   const WordSpeakWidget({
@@ -79,28 +80,10 @@ class _WordSpeakWidgetState extends State<WordSpeakWidget> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Stack(
-                      clipBehavior: Clip.none,
                       alignment: Alignment.center,
                       children: [
-                        // Main Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppColors.funBg,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: AppColors.pandaBlack,
-                              width: 3,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: AppColors.pandaBlack,
-                                offset: Offset(4, 4),
-                                blurRadius: 0,
-                              ),
-                            ],
-                          ),
+                        QuestionWidget(
+                          title: "Read this loud!",
                           child: Column(
                             children: [
                               Row(
@@ -122,6 +105,7 @@ class _WordSpeakWidgetState extends State<WordSpeakWidget> {
                                         id: widget.currentWord.id,
                                         type: 'dictionary',
                                         size: 24,
+                                        autoPlay: true,
                                       ),
                                     ),
                                   ),
@@ -173,47 +157,6 @@ class _WordSpeakWidgetState extends State<WordSpeakWidget> {
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                        // Top Label
-                        Positioned(
-                          top: -14,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: Transform.rotate(
-                              angle: 0.05,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppColors.pandaBlack,
-                                    width: 2,
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      offset: Offset(0, 2),
-                                      blurRadius: 0,
-                                    ),
-                                  ],
-                                ),
-                                child: const Text(
-                                  'Read this loud!',
-                                  style: TextStyle(
-                                    fontFamily: 'Fredoka',
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: AppColors.pandaBlack,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ),
                         ),
                       ],

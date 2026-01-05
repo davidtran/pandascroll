@@ -31,6 +31,14 @@ class _SentenceDictationWidgetState
     extends ConsumerState<SentenceDictationWidget> {
   final TextEditingController _controller = TextEditingController();
 
+  @override
+  void didUpdateWidget(covariant SentenceDictationWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.sentence != oldWidget.sentence) {
+      _controller.clear();
+    }
+  }
+
   void _checkAnswer() {
     final userInput = _normalize(_controller.text);
     final original = _normalize(widget.sentence.text);

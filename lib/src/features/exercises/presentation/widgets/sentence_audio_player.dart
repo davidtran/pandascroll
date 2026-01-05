@@ -125,14 +125,21 @@ class _SentenceAudioPlayerState extends State<SentenceAudioPlayer> {
           final playerState = _audioPlayer.playerState;
           final processingState = playerState.processingState;
           final playing = playerState.playing;
-          print('$playerState');
 
-          if (processingState == ProcessingState.completed || !playing) {
-            print('play');
+          if (processingState == ProcessingState.completed) {
+            // 1. Force reset: Pause ensures the engine acknowledges the stop
+            await _audioPlayer.pause();
+            // 2. Rewind
             await _audioPlayer.seek(Duration.zero);
-            _audioPlayer.play();
+            // 3. Play
+            await _audioPlayer.play();
+          } else if (!playing) {
+            // Case: User paused manually in the middle
+            // Keep your behavior: Restart from beginning
+            await _audioPlayer.seek(Duration.zero);
+            await _audioPlayer.play();
           } else {
-            print('pause');
+            // Case: Currently playing, user wants to pause
             await _audioPlayer.pause();
           }
         },

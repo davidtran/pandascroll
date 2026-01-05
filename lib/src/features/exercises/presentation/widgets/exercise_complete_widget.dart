@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/exp_badge.dart';
 import 'package:pandascroll/src/features/profile/presentation/providers/profile_providers.dart';
+import 'package:pandascroll/src/features/exercises/presentation/controllers/video_exercise_controller.dart';
 
 class ExerciseCompleteWidget extends ConsumerStatefulWidget {
   final VoidCallback onSemesterExercises;
@@ -12,6 +13,7 @@ class ExerciseCompleteWidget extends ConsumerStatefulWidget {
   final int correctCount;
   final String videoId;
   final List<String> learnedItems;
+  final bool isSentence;
 
   const ExerciseCompleteWidget({
     super.key,
@@ -20,6 +22,7 @@ class ExerciseCompleteWidget extends ConsumerStatefulWidget {
     required this.correctCount,
     required this.videoId,
     required this.learnedItems,
+    this.isSentence = false,
   });
 
   @override
@@ -57,83 +60,77 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
   }
 
   void _startAnimation({bool awardXp = true}) {
-    // 1. XP / Panda Animation
     final RenderBox? pandaStartBox =
         _avatarKey.currentContext?.findRenderObject() as RenderBox?;
 
-    // We use the center of the screen/avatar as start for "learned items" if we want them to fly OUT?
-    // Or fly IN to the avatar? The request says "fly into the center of avatar".
-    // So target is Avatar. Start is random.
-
-    // Let's assume start box is the screen edges or random, and target is pandaIconKey (which is the avatar now).
-
-    int animationsToComplete = 0;
+    int animationsToComplete = widget.learnedItems.length;
     int completedAnimations = 0;
-
-    // We animate learned items + maybe some stars/confetti for correct count if desired.
-    // Let's focus on learned items flying IN to the avatar.
-    animationsToComplete = widget.learnedItems.length;
-
-    // Check availability of animation targets
-    if (pandaStartBox != null) {
-      // Correct Count logic for XP is separate, handled by checkCompletion trigger maybe?
-      // Or we just add XP immediately and visual is just for fun.
-    }
 
     void checkCompletion() {
       completedAnimations++;
       if (completedAnimations >= animationsToComplete) {
-        // All visual animations done.
-        // Trigger Backend updates
-        if (awardXp && !_xpAwarded && widget.correctCount > 0) {
+        if (awardXp && !_xpAwarded) {
           _xpAwarded = true;
+
+          // ... (Your existing save logic remains here) ...
           ref
-              .read(userLanguageProfileProvider.notifier)
-              .addXp(
-                event: 'complete_exercise',
-                value: widget.correctCount.toDouble(),
-                videoId: widget.videoId,
-              );
+              .read(videoExerciseProvider(widget.videoId).notifier)
+              .saveExerciseResult();
+
+          if (widget.correctCount > 0) {
+            ref
+                .read(userLanguageProfileProvider.notifier)
+                .addXp(
+                  event: 'complete_exercise',
+                  value: widget.correctCount.toDouble(),
+                  videoId: widget.videoId,
+                );
+          }
         }
       }
     }
 
-    // Start Flying Items Animation
-    // Target is the Avatar (pandaIconKey)
     if (pandaStartBox != null) {
+      // 1. Find the center of the avatar (Target)
       final targetPos = pandaStartBox.localToGlobal(
         Offset(pandaStartBox.size.width / 2, pandaStartBox.size.height / 2),
       );
 
-      final screenSize = MediaQuery.of(context).size;
+      final itemCount = widget.learnedItems.length;
       final random = Random();
 
-      for (int i = 0; i < widget.learnedItems.length; i++) {
-        // "start from left 0 to right 0 of the container"
-        // We'll spawn them at random X across the screen width.
-        // And random Y around the avatar (e.g. +/- 100).
+      // 2. Define the circle properties
+      final double radius = 100.0; // Distance from center of avatar
+      final double startAngleOffset = -pi / 2; // Start from top (12 o'clock)
 
-        final startX = random.nextDouble() * screenSize.width;
-        // Keep Y somewhat near the avatar so it's not too far
-        final startY = targetPos.dy + (random.nextDouble() - 0.5) * 200;
+      final baseScale = widget.isSentence ? 0.8 : 1.0;
 
-        final startPos = Offset(startX, startY);
+      for (int i = 0; i < 5; i++) {
+        // 3. Calculate Angle: Distribute evenly around the circle (2 * pi)
+        // We add i * (2 * pi / itemCount) to space them out
+        final double angle = startAngleOffset + (2 * pi * i / 5);
 
-        // All spawn immediately but have slight delay in appearing?
-        // User said "wait for 2 secs then fly".
-        // Let's spawn them now.
-        Future.delayed(Duration(milliseconds: i * 200), () {
+        // 4. Convert Polar (Angle, Radius) to Cartesian (X, Y)
+        // Formula: x = center + r * cos(a), y = center + r * sin(a)
+
+        final double startX = targetPos.dx + radius * cos(angle);
+        final double startY = targetPos.dy + radius * sin(angle);
+        final double jitterY = (random.nextDouble() - 0.5) * 20;
+        final startPos = Offset(startX, startY + jitterY);
+
+        // Spawn with a slight stagger for a "spiral" appearance
+        Future.delayed(Duration(milliseconds: i * 100), () {
           if (!mounted) return;
           _spawnFlyingItem(
             startPos,
             targetPos,
             widget.learnedItems[i],
+            baseScale: baseScale,
             onComplete: checkCompletion,
           );
         });
       }
 
-      // If no learned items, trigger completion immediately
       if (widget.learnedItems.isEmpty) {
         checkCompletion();
       }
@@ -144,6 +141,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
     Offset startPos,
     Offset targetPos,
     String text, {
+    double baseScale = 1.0,
     required VoidCallback onComplete,
   }) {
     late OverlayEntry entry;
@@ -152,6 +150,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
         startPos: startPos,
         targetPos: targetPos,
         text: text,
+        baseScale: baseScale,
         onComplete: () {
           entry.remove();
           _flyingEntries.remove(entry);
@@ -186,7 +185,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
               children: [
                 const Spacer(),
                 _buildProfileDisplay(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 40),
                 _buildScoreDisplay(),
                 const Spacer(),
                 _buildActionButtons(),
@@ -329,6 +328,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
         ExpBadge(
           pandaKey: pandaIconKey,
           onTap: () => _startAnimation(awardXp: false),
+          score: widget.correctCount,
         ),
 
         const SizedBox(height: 12),
@@ -471,12 +471,14 @@ class _FlyingItemAnimation extends StatefulWidget {
   final Offset startPos;
   final Offset targetPos;
   final String text;
+  final double baseScale;
   final VoidCallback onComplete;
 
   const _FlyingItemAnimation({
     required this.startPos,
     required this.targetPos,
     required this.text,
+    this.baseScale = 1.0,
     required this.onComplete,
   });
 
@@ -524,7 +526,11 @@ class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
     // Scale down as it flies in (to avatar)
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(_controller);
+    // Start at baseScale, end at 0.0
+    _scaleAnimation = Tween<double>(
+      begin: widget.baseScale,
+      end: 0.0,
+    ).animate(_controller);
 
     // Wait 2 seconds before flying
     Future.delayed(const Duration(seconds: 2), () {
@@ -561,7 +567,7 @@ class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
             child: Transform.scale(
               scale: _scaleAnimation.value,
               child: Transform.rotate(
-                angle: _rotation,
+                angle: 0,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,

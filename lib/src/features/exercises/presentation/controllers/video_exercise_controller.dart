@@ -33,6 +33,7 @@ class ExerciseState {
   final List<SentenceExerciseModel> sentences;
   final Map<String, List<String>> wordOptions;
   final int currentIndex;
+  final int sessionScore;
 
   final ExerciseStage stage;
 
@@ -41,6 +42,7 @@ class ExerciseState {
     this.sentences = const [],
     this.wordOptions = const {},
     this.currentIndex = 0,
+    this.sessionScore = 0,
     this.stage = ExerciseStage.picker,
   });
 
@@ -49,6 +51,7 @@ class ExerciseState {
     List<SentenceExerciseModel>? sentences,
     Map<String, List<String>>? wordOptions,
     int? currentIndex,
+    int? sessionScore,
     ExerciseStage? stage,
   }) {
     return ExerciseState(
@@ -56,6 +59,7 @@ class ExerciseState {
       sentences: sentences ?? this.sentences,
       wordOptions: wordOptions ?? this.wordOptions,
       currentIndex: currentIndex ?? this.currentIndex,
+      sessionScore: sessionScore ?? this.sessionScore,
       stage: stage ?? this.stage,
     );
   }
@@ -87,7 +91,9 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
           stage: ExerciseStage.review,
           words: data.words,
           wordOptions: data.wordOptions,
+          sentences: const [],
           currentIndex: 0,
+          sessionScore: 0,
         ),
       );
     } catch (e, st) {
@@ -114,7 +120,10 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
         state.value!.copyWith(
           stage: ExerciseStage.sentenceReview,
           sentences: sentences,
+          words: const [],
+          wordOptions: const {},
           currentIndex: 0,
+          sessionScore: 0,
         ),
       );
     } catch (e, st) {
@@ -240,5 +249,45 @@ class VideoExerciseController extends AsyncNotifier<ExerciseState> {
     final currentState = state.value;
     if (currentState == null) return;
     _advanceStage(currentState);
+  }
+
+  void incrementScore() {
+    final currentState = state.value;
+    if (currentState == null) return;
+    state = AsyncValue.data(
+      currentState.copyWith(sessionScore: currentState.sessionScore + 1),
+    );
+  }
+
+  Future<void> saveExerciseResult() async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    String type = 'word';
+    int total = currentState.words.length;
+
+    if (currentState.sentences.isNotEmpty) {
+      type = 'sentence';
+      total = currentState.sentences.length;
+    }
+
+    try {
+      await Supabase.instance.client.from('video_exercise_results').upsert({
+        'user_id': userId,
+        'video_id': videoId,
+        'score': currentState.sessionScore,
+        'total_questions': total,
+        'type': type,
+      }, onConflict: 'user_id,video_id');
+    } catch (e) {
+      debugPrint("Error saving exercise result: $e");
+    }
+  }
+
+  void resetToPicker() {
+    state = AsyncValue.data(ExerciseState(stage: ExerciseStage.picker));
   }
 }

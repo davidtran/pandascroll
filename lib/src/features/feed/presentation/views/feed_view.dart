@@ -35,13 +35,20 @@ class _FeedViewState extends ConsumerState<FeedView> {
   String _currentTab = "Feed";
   final GlobalKey _headerKey = GlobalKey();
   double _headerHeight = 90.0; // Default estimate
+  VoidCallback? _onBarrierTap;
 
-  void _openPanel(String title, Widget content, {bool? barrierDismissible}) {
+  void _openPanel(
+    String title,
+    Widget content, {
+    bool? barrierDismissible,
+    VoidCallback? onBarrierTap,
+  }) {
     setState(() {
       _panelTitle = title;
       _panelContent = content;
       _isPanelOpen = true;
       _barrierDismissible = barrierDismissible ?? true;
+      _onBarrierTap = onBarrierTap;
     });
   }
 
@@ -145,6 +152,7 @@ class _FeedViewState extends ConsumerState<FeedView> {
               onClose: _closePanel,
               isVisible: _isPanelOpen,
               barrierDismissible: _barrierDismissible,
+              onBarrierTap: _onBarrierTap,
               child: _panelContent,
             ),
           ),
@@ -199,7 +207,13 @@ class _FeedViewState extends ConsumerState<FeedView> {
 class _VideoPageFeed extends ConsumerWidget {
   final PageController pageController;
   final bool isPanelOpen;
-  final Function(String, Widget, {bool? barrierDismissible}) onOpenPanel;
+  final Function(
+    String,
+    Widget, {
+    bool? barrierDismissible,
+    VoidCallback? onBarrierTap,
+  })
+  onOpenPanel;
   final Function(String) onUpdateTitle;
   final Function() onClosePanel;
 
@@ -260,10 +274,22 @@ class _VideoPageFeed extends ConsumerWidget {
               );
             }
 
+            final exerciseKey = GlobalKey<VideoExerciseState>();
             onOpenPanel(
               "",
-              VideoExercise(videoId: videos[index].id, onClose: onClosePanel),
+              VideoExercise(
+                key: exerciseKey,
+                videoId: videos[index].id,
+                onClose: onClosePanel,
+              ),
               barrierDismissible: true,
+              onBarrierTap: () {
+                if (exerciseKey.currentState != null) {
+                  exerciseKey.currentState!.handleClose();
+                } else {
+                  onClosePanel();
+                }
+              },
             );
           },
           onShowComments: () => onOpenPanel(

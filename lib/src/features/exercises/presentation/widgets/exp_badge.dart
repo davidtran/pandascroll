@@ -3,8 +3,14 @@ import 'package:flutter/material.dart';
 class ExpBadge extends StatelessWidget {
   final GlobalKey pandaKey;
   final VoidCallback? onTap;
+  final int score;
 
-  const ExpBadge({super.key, required this.pandaKey, this.onTap});
+  const ExpBadge({
+    super.key,
+    required this.pandaKey,
+    this.onTap,
+    required this.score,
+  });
 
   // Colors extracted from your tailwind config
   static const Color pandaBlack = Color(0xFF2D2D2D);
@@ -60,8 +66,8 @@ class ExpBadge extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    "Exp +10!",
-                    style: TextStyle(
+                    "Exp +$score!",
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 18,
                       fontWeight: FontWeight.w900, // font-black

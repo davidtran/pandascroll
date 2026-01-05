@@ -77,17 +77,6 @@ class _WordQuizWidgetState extends State<WordQuizWidget> {
     if (_isCorrect) {
       Future.delayed(const Duration(milliseconds: 1000), widget.onCorrect);
     } else {
-      // Allow retry? Or auto move? Usually quiz lets you see the error.
-      // For now, let's just wait a bit and move on or let them retry.
-      // User requirement: "loop through". Usually means practice until done.
-      // I'll auto move or let them tap "Next"?
-      // Let's just auto-move for now or provide feedback.
-      // Wait, if it's "Review", maybe we shouldn't punish hard.
-      // I'll create a "Continue" button if wrong?
-      // Or just delay and call onCorrect (which actually moves to next word) to not block flow?
-      // Better: if wrong, showing Feedback, then valid response needed?
-      // Let's stick to simplest: simple delay then next, or if rigorous, require correct answer.
-      // For this "Fun" style: Green/Red flash, then next.
       Future.delayed(const Duration(milliseconds: 1500), widget.onCorrect);
     }
   }

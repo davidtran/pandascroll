@@ -99,28 +99,41 @@ class _SentenceScrambleWidgetState
     // But since I can't modify imports easily in write_to_file without overwriting, I'll use dynamic lookup or just assume user fixes imports if I miss one.
     // Wait, I am writing the whole file. I can add imports.
 
-    return Column(
-      children: [
-        QuestionWidget(
-          title: "ARRANGE THE SENTENCE",
-          child: Column(
-            children: [
-              // Audio Player
-              _buildAudioPlayer(),
-              const SizedBox(height: 24),
-              // Drag Target Area
-              _buildDragArea(),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  const SizedBox(height: 24),
+                  QuestionWidget(
+                    title: "ARRANGE THE SENTENCE",
+                    child: Column(
+                      children: [
+                        // Audio Player
+                        _buildAudioPlayer(),
+                        const SizedBox(height: 24),
+                        // Drag Target Area
+                        _buildDragArea(),
+                      ],
+                    ),
+                  ),
+
+                  const Spacer(),
+                  const SizedBox(height: 16),
+
+                  // Word Bank
+                  _buildWordBank(),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
           ),
-        ),
-
-        const Spacer(),
-
-        // Word Bank
-        _buildWordBank(),
-
-        const SizedBox(height: 32),
-      ],
+        );
+      },
     );
   }
 

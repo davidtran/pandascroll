@@ -12,7 +12,7 @@ import 'word_review_widget.dart';
 import 'sentence_review_widget.dart';
 import 'word_game_widget.dart';
 
-class VideoExercise extends ConsumerWidget {
+class VideoExercise extends ConsumerStatefulWidget {
   final String videoId;
   final VoidCallback onClose;
 
@@ -22,13 +22,18 @@ class VideoExercise extends ConsumerWidget {
     required this.onClose,
   });
 
-  void _handleClose(BuildContext context, WidgetRef ref) {
-    final state = ref.read(videoExerciseProvider(videoId)).asData?.value;
+  @override
+  ConsumerState<VideoExercise> createState() => VideoExerciseState();
+}
+
+class VideoExerciseState extends ConsumerState<VideoExercise> {
+  void handleClose() {
+    final state = ref.read(videoExerciseProvider(widget.videoId)).asData?.value;
     if (state == null ||
         state.stage == ExerciseStage.picker ||
         state.stage == ExerciseStage.completed) {
-      ref.invalidate(videoExerciseProvider(videoId));
-      onClose();
+      ref.read(videoExerciseProvider(widget.videoId).notifier).resetToPicker();
+      widget.onClose();
       return;
     }
 
@@ -89,8 +94,12 @@ class VideoExercise extends ConsumerWidget {
                       text: "Quit",
                       onPressed: () {
                         Navigator.pop(context);
-                        ref.invalidate(videoExerciseProvider(videoId));
-                        onClose();
+                        ref
+                            .read(
+                              videoExerciseProvider(widget.videoId).notifier,
+                            )
+                            .resetToPicker();
+                        widget.onClose();
                       },
                       backgroundColor: Colors.white,
                       borderColor: Colors.red,
@@ -108,8 +117,8 @@ class VideoExercise extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final exerciseAsync = ref.watch(videoExerciseProvider(videoId));
+  Widget build(BuildContext context) {
+    final exerciseAsync = ref.watch(videoExerciseProvider(widget.videoId));
 
     return Container(
       decoration: BoxDecoration(
@@ -125,15 +134,15 @@ class VideoExercise extends ConsumerWidget {
               return ExercisePickerWidget(
                 onWordExerciseTap: () {
                   ref
-                      .read(videoExerciseProvider(videoId).notifier)
+                      .read(videoExerciseProvider(widget.videoId).notifier)
                       .startWordExercise();
                 },
                 onSentenceExerciseTap: () {
                   ref
-                      .read(videoExerciseProvider(videoId).notifier)
+                      .read(videoExerciseProvider(widget.videoId).notifier)
                       .startSentenceExercise();
                 },
-                onMaybeLaterTap: () => _handleClose(context, ref),
+                onMaybeLaterTap: () => handleClose(),
               );
             case ExerciseStage.loading:
               return _buildLoadingState(context);
@@ -146,19 +155,23 @@ class VideoExercise extends ConsumerWidget {
                 index: state.currentIndex,
                 total: state.words.length,
                 onNextWord: () {
-                  ref.read(videoExerciseProvider(videoId).notifier).nextWord();
+                  ref
+                      .read(videoExerciseProvider(widget.videoId).notifier)
+                      .nextWord();
                 },
-                onClose: () => _handleClose(context, ref),
+                onClose: () => handleClose(),
                 onSkip: () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
+                    .read(videoExerciseProvider(widget.videoId).notifier)
                     .skipReview(),
                 onIKnowThisWord: () async {
                   final videos = ref.read(videoFeedProvider).videos;
-                  final video = videos.firstWhere((v) => v.id == videoId);
+                  final video = videos.firstWhere(
+                    (v) => v.id == widget.videoId,
+                  );
                   final word = state.words[state.currentIndex].word;
 
                   await ref
-                      .read(videoExerciseProvider(videoId).notifier)
+                      .read(videoExerciseProvider(widget.videoId).notifier)
                       .markWordAsKnown(word, video.language);
 
                   if (context.mounted) {
@@ -180,14 +193,14 @@ class VideoExercise extends ConsumerWidget {
             case ExerciseStage.speak:
             case ExerciseStage.write:
               return WordGameWidget(
-                videoId: videoId,
+                videoId: widget.videoId,
                 state: state,
-                onClose: () => _handleClose(context, ref),
+                onClose: () => handleClose(),
                 onNext: () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
+                    .read(videoExerciseProvider(widget.videoId).notifier)
                     .nextWord(),
                 onSkip: () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
+                    .read(videoExerciseProvider(widget.videoId).notifier)
                     .nextWord(),
               );
 
@@ -197,24 +210,20 @@ class VideoExercise extends ConsumerWidget {
               if (state.words.isNotEmpty) {
                 learnedItems.addAll(state.words.map((e) => e.word));
               } else if (state.sentences.isNotEmpty) {
-                // For sentences, just use "Sentence 1", "Sentence 2" or short snippet?
-                // The prompt says "sentence and words that user have learn".
-                // Full sentence might be too long for the bubble.
-                // Let's use the full text but maybe ellipsized by the widget if needed.
-                // Or "Sentence #1" etc. User wants "words / sentence".
                 learnedItems.addAll(state.sentences.map((e) => e.text));
               }
 
               return ExerciseCompleteWidget(
                 onSemesterExercises: () {
                   ref
-                      .read(videoExerciseProvider(videoId).notifier)
+                      .read(videoExerciseProvider(widget.videoId).notifier)
                       .startSentenceExercise();
                 },
-                onNextVideo: () => _handleClose(context, ref),
-                correctCount: 10,
-                videoId: videoId,
+                onNextVideo: () => handleClose(),
+                correctCount: state.sessionScore,
+                videoId: widget.videoId,
                 learnedItems: learnedItems,
+                isSentence: state.sentences.isNotEmpty,
               );
 
             case ExerciseStage.sentenceReview:
@@ -222,31 +231,35 @@ class VideoExercise extends ConsumerWidget {
                 return const Center(child: Text("No sentences loaded!"));
               }
               return SentenceReviewWidget(
-                videoId: videoId,
+                videoId: widget.videoId,
                 sentence: state.sentences[state.currentIndex],
                 index: state.currentIndex,
                 total: state.sentences.length,
-                onNext: () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
-                    .nextWord(),
-                onClose: () => _handleClose(context, ref),
+                onNext: () {
+                  ref
+                      .read(videoExerciseProvider(widget.videoId).notifier)
+                      .incrementScore();
+                  ref
+                      .read(videoExerciseProvider(widget.videoId).notifier)
+                      .nextWord();
+                },
+                onClose: () => handleClose(),
               );
-            case ExerciseStage
-                .sentenceScramble: // [NEW] sentence exercise logic
+            case ExerciseStage.sentenceScramble:
             case ExerciseStage.sentenceSpeak:
             case ExerciseStage.sentenceDictation:
               if (state.sentences.isEmpty) {
                 return const Center(child: Text("No sentences loaded!"));
               }
               return WordGameWidget(
-                videoId: videoId,
+                videoId: widget.videoId,
                 state: state,
-                onClose: () => _handleClose(context, ref),
+                onClose: () => handleClose(),
                 onNext: () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
+                    .read(videoExerciseProvider(widget.videoId).notifier)
                     .nextWord(),
                 onSkip: () => ref
-                    .read(videoExerciseProvider(videoId).notifier)
+                    .read(videoExerciseProvider(widget.videoId).notifier)
                     .nextWord(),
               );
           }

@@ -19,9 +19,11 @@ class InteractionPanel extends StatefulWidget {
     this.videoId,
     required this.isVisible,
     this.barrierDismissible = true,
+    this.onBarrierTap,
   });
 
   final bool barrierDismissible;
+  final VoidCallback? onBarrierTap;
 
   @override
   InteractionPanelWidget createState() => InteractionPanelWidget();
@@ -50,7 +52,9 @@ class InteractionPanelWidget extends State<InteractionPanel> {
             Positioned.fill(
               child: withInterceptor(
                 GestureDetector(
-                  onTap: widget.barrierDismissible ? handleClose : null,
+                  onTap:
+                      widget.onBarrierTap ??
+                      (widget.barrierDismissible ? handleClose : null),
                   behavior: HitTestBehavior.opaque,
                   child: Container(color: Colors.black.withOpacity(0.6)),
                 ),

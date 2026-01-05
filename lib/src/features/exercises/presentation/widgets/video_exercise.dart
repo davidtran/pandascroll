@@ -192,6 +192,19 @@ class VideoExercise extends ConsumerWidget {
               );
 
             case ExerciseStage.completed:
+              // Collect learned items for animation
+              final learnedItems = <String>[];
+              if (state.words.isNotEmpty) {
+                learnedItems.addAll(state.words.map((e) => e.word));
+              } else if (state.sentences.isNotEmpty) {
+                // For sentences, just use "Sentence 1", "Sentence 2" or short snippet?
+                // The prompt says "sentence and words that user have learn".
+                // Full sentence might be too long for the bubble.
+                // Let's use the full text but maybe ellipsized by the widget if needed.
+                // Or "Sentence #1" etc. User wants "words / sentence".
+                learnedItems.addAll(state.sentences.map((e) => e.text));
+              }
+
               return ExerciseCompleteWidget(
                 onSemesterExercises: () {
                   ref
@@ -201,6 +214,7 @@ class VideoExercise extends ConsumerWidget {
                 onNextVideo: () => _handleClose(context, ref),
                 correctCount: 10,
                 videoId: videoId,
+                learnedItems: learnedItems,
               );
 
             case ExerciseStage.sentenceReview:

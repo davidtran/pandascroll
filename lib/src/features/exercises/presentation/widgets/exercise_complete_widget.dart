@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pandascroll/src/core/theme/app_colors.dart';
 import 'package:pandascroll/src/features/exercises/presentation/widgets/exp_badge.dart';
-import 'package:pandascroll/src/features/feed/presentation/providers/paw_provider.dart';
 import 'package:pandascroll/src/features/profile/presentation/providers/profile_providers.dart';
 
 class ExerciseCompleteWidget extends ConsumerStatefulWidget {
@@ -12,6 +11,7 @@ class ExerciseCompleteWidget extends ConsumerStatefulWidget {
   final VoidCallback onNextVideo;
   final int correctCount;
   final String videoId;
+  final List<String> learnedItems;
 
   const ExerciseCompleteWidget({
     super.key,
@@ -19,6 +19,7 @@ class ExerciseCompleteWidget extends ConsumerStatefulWidget {
     required this.onNextVideo,
     required this.correctCount,
     required this.videoId,
+    required this.learnedItems,
   });
 
   @override
@@ -31,7 +32,9 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
   late AnimationController _controller;
   late Animation<double> _floatAnimation;
   final GlobalKey pandaIconKey = GlobalKey();
+  final GlobalKey _avatarKey = GlobalKey();
   List<OverlayEntry> _flyingEntries = [];
+  bool _xpAwarded = false;
 
   @override
   void initState() {
@@ -49,24 +52,32 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
     _controller.repeat(reverse: true);
 
     Future.delayed(const Duration(milliseconds: 500), () {
-      _handleClaim();
+      _startAnimation();
     });
   }
 
-  void _handleClaim() {
+  void _startAnimation({bool awardXp = true}) {
     // 1. XP / Panda Animation
-    final pandaTargetKey = ref.read(pandaIconKeyProvider);
-    final RenderBox? pandaTargetBox =
-        pandaTargetKey.currentContext?.findRenderObject() as RenderBox?;
     final RenderBox? pandaStartBox =
-        pandaIconKey.currentContext?.findRenderObject() as RenderBox?;
+        _avatarKey.currentContext?.findRenderObject() as RenderBox?;
+
+    // We use the center of the screen/avatar as start for "learned items" if we want them to fly OUT?
+    // Or fly IN to the avatar? The request says "fly into the center of avatar".
+    // So target is Avatar. Start is random.
+
+    // Let's assume start box is the screen edges or random, and target is pandaIconKey (which is the avatar now).
 
     int animationsToComplete = 0;
     int completedAnimations = 0;
 
+    // We animate learned items + maybe some stars/confetti for correct count if desired.
+    // Let's focus on learned items flying IN to the avatar.
+    animationsToComplete = widget.learnedItems.length;
+
     // Check availability of animation targets
-    if (pandaTargetBox != null && pandaStartBox != null) {
-      animationsToComplete += widget.correctCount;
+    if (pandaStartBox != null) {
+      // Correct Count logic for XP is separate, handled by checkCompletion trigger maybe?
+      // Or we just add XP immediately and visual is just for fun.
     }
 
     void checkCompletion() {
@@ -74,7 +85,8 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
       if (completedAnimations >= animationsToComplete) {
         // All visual animations done.
         // Trigger Backend updates
-        if (widget.correctCount > 0) {
+        if (awardXp && !_xpAwarded && widget.correctCount > 0) {
+          _xpAwarded = true;
           ref
               .read(userLanguageProfileProvider.notifier)
               .addXp(
@@ -86,21 +98,44 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
       }
     }
 
-    // Start Panda Animations
-    if (pandaTargetBox != null && pandaStartBox != null) {
-      final startPos = pandaStartBox.localToGlobal(Offset.zero);
-      final targetPos = pandaTargetBox.localToGlobal(Offset.zero);
+    // Start Flying Items Animation
+    // Target is the Avatar (pandaIconKey)
+    if (pandaStartBox != null) {
+      final targetPos = pandaStartBox.localToGlobal(
+        Offset(pandaStartBox.size.width / 2, pandaStartBox.size.height / 2),
+      );
 
-      for (int i = 0; i < widget.correctCount; i++) {
-        Future.delayed(Duration(milliseconds: i * 100), () {
+      final screenSize = MediaQuery.of(context).size;
+      final random = Random();
+
+      for (int i = 0; i < widget.learnedItems.length; i++) {
+        // "start from left 0 to right 0 of the container"
+        // We'll spawn them at random X across the screen width.
+        // And random Y around the avatar (e.g. +/- 100).
+
+        final startX = random.nextDouble() * screenSize.width;
+        // Keep Y somewhat near the avatar so it's not too far
+        final startY = targetPos.dy + (random.nextDouble() - 0.5) * 200;
+
+        final startPos = Offset(startX, startY);
+
+        // All spawn immediately but have slight delay in appearing?
+        // User said "wait for 2 secs then fly".
+        // Let's spawn them now.
+        Future.delayed(Duration(milliseconds: i * 200), () {
           if (!mounted) return;
           _spawnFlyingItem(
             startPos,
             targetPos,
-            'assets/images/panda.png',
+            widget.learnedItems[i],
             onComplete: checkCompletion,
           );
         });
+      }
+
+      // If no learned items, trigger completion immediately
+      if (widget.learnedItems.isEmpty) {
+        checkCompletion();
       }
     }
   }
@@ -108,7 +143,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
   void _spawnFlyingItem(
     Offset startPos,
     Offset targetPos,
-    String assetPath, {
+    String text, {
     required VoidCallback onComplete,
   }) {
     late OverlayEntry entry;
@@ -116,7 +151,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
       builder: (context) => _FlyingItemAnimation(
         startPos: startPos,
         targetPos: targetPos,
-        assetPath: assetPath,
+        text: text,
         onComplete: () {
           entry.remove();
           _flyingEntries.remove(entry);
@@ -150,7 +185,7 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(),
-                _buildPandaDisplay(),
+                _buildProfileDisplay(),
                 const SizedBox(height: 24),
                 _buildScoreDisplay(),
                 const Spacer(),
@@ -180,7 +215,9 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
     );
   }
 
-  Widget _buildPandaDisplay() {
+  Widget _buildProfileDisplay() {
+    final userProfileAsync = ref.watch(userProfileProvider);
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -190,32 +227,59 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
           children: [
             // Glow
             Container(
-              width: 150,
-              height: 150,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: AppColors.bambooLight.withOpacity(0.6),
                 shape: BoxShape.circle,
-                // blur radius simulated via shadow or just generic container
+                boxShadow: const [
+                  BoxShadow(
+                    color: AppColors.bambooGreen,
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
             ),
-            // Main Circle
+            // Avatar Circle
             Container(
-              width: 150,
-              height: 150,
+              key: _avatarKey,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.pandaBlack, width: 4),
+                border: Border.all(color: AppColors.pandaBlack, width: 2),
                 boxShadow: const [
                   BoxShadow(
                     color: AppColors.pandaBlack,
-                    offset: Offset(4, 6),
+                    offset: Offset(2, 3),
                     blurRadius: 0,
                   ),
                 ],
               ),
-              child: const Center(
-                child: Text("🐼", style: TextStyle(fontSize: 100)),
+              child: ClipOval(
+                child: userProfileAsync.when(
+                  data: (data) {
+                    final avatarUrl = data?['avatar_url'] as String?;
+                    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+                      return Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Text("🐼", style: TextStyle(fontSize: 80)),
+                        ),
+                      );
+                    }
+                    return const Center(
+                      child: Text("🐼", style: TextStyle(fontSize: 80)),
+                    );
+                  },
+                  loading: () => const CircularProgressIndicator(),
+                  error: (_, __) => const Center(
+                    child: Text("🐼", style: TextStyle(fontSize: 80)),
+                  ),
+                ),
               ),
             ),
             // Tag
@@ -225,15 +289,15 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
               child: Transform.rotate(
                 angle: 0.2,
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: AppColors.accentYellow,
                     borderRadius: BorderRadius.circular(100),
                     border: Border.all(color: AppColors.pandaBlack, width: 3),
                   ),
                   child: const Center(
-                    child: Text("🎉", style: TextStyle(fontSize: 24)),
+                    child: Text("🎉", style: TextStyle(fontSize: 16)),
                   ),
                 ),
               ),
@@ -262,7 +326,10 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
         const SizedBox(height: 12),
 
         // Paw Score Badge
-        ExpBadge(pandaKey: pandaIconKey),
+        ExpBadge(
+          pandaKey: pandaIconKey,
+          onTap: () => _startAnimation(awardXp: false),
+        ),
 
         const SizedBox(height: 12),
         const Text(
@@ -403,13 +470,13 @@ class _ExerciseCompleteWidgetState extends ConsumerState<ExerciseCompleteWidget>
 class _FlyingItemAnimation extends StatefulWidget {
   final Offset startPos;
   final Offset targetPos;
-  final String assetPath;
+  final String text;
   final VoidCallback onComplete;
 
   const _FlyingItemAnimation({
     required this.startPos,
     required this.targetPos,
-    required this.assetPath,
+    required this.text,
     required this.onComplete,
   });
 
@@ -422,7 +489,9 @@ class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
   late AnimationController _controller;
   late Animation<double> _animation;
   late Animation<double> _scaleAnimation;
-  late double _randomOffset;
+  late double _rotation;
+  late Color _bgColor;
+  late Color _textColor;
 
   @override
   void initState() {
@@ -432,15 +501,37 @@ class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
       duration: const Duration(milliseconds: 1000),
     );
 
-    // Randomize path slightly for effect
-    _randomOffset = (Random().nextDouble() - 0.5) * 100;
+    final random = Random();
+    _rotation = (random.nextDouble() - 0.5) * 0.4; // -0.2 to 0.2 rad
+
+    // Random styling
+    final colors = [
+      AppColors.bambooLight,
+      AppColors.accentYellow,
+      AppColors.levelBlueLight,
+      Colors.white,
+    ];
+    _bgColor = colors[random.nextInt(colors.length)];
+    // Make text white for blue/darker bg if needed, or always black?
+    // User sample: blue bg has white text. Others have panda-black.
+    _textColor =
+        (_bgColor ==
+            AppColors
+                .levelBlueLight) // Checking color value might differ if const
+        ? Colors.white
+        : AppColors.pandaBlack;
 
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
-    // Scale down as it flies away
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.5).animate(_controller);
+    // Scale down as it flies in (to avatar)
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(_controller);
 
-    _controller.forward().then((_) => widget.onComplete());
+    // Wait 2 seconds before flying
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _controller.forward().then((_) => widget.onComplete());
+      }
+    });
   }
 
   @override
@@ -456,8 +547,7 @@ class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
       builder: (context, child) {
         final currentX =
             widget.startPos.dx +
-            (widget.targetPos.dx - widget.startPos.dx) * _animation.value +
-            (_randomOffset * sin(_animation.value * pi)); // Arc effect
+            (widget.targetPos.dx - widget.startPos.dx) * _animation.value;
 
         final currentY =
             widget.startPos.dy +
@@ -466,9 +556,41 @@ class _FlyingItemAnimationState extends State<_FlyingItemAnimation>
         return Positioned(
           left: currentX,
           top: currentY,
-          child: Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Image.asset(widget.assetPath, width: 40, height: 40),
+          child: FractionalTranslation(
+            translation: const Offset(-0.5, -0.5),
+            child: Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Transform.rotate(
+                angle: _rotation,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _bgColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.pandaBlack, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        offset: Offset(0, 2),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    widget.text,
+                    style: TextStyle(
+                      color: _textColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      fontFamily: 'Fredoka',
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },

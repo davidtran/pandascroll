@@ -34,7 +34,6 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
                 orElse: () => 0,
               ),
             ),
-
             Expanded(
               child: dictionaryAsync.when(
                 data: (entries) {
@@ -50,21 +49,16 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
                     );
                   }
 
+                  // OPTIMIZATION: Choose how to build the list based on filter
                   if (_selectedFilter == DictionaryFilter.recent) {
-                    return _buildGroupedList(filteredEntries);
+                    return _buildOptimizedGroupedList(filteredEntries);
+                  } else {
+                    return _buildStandardList(filteredEntries);
                   }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredEntries.length,
-                    itemBuilder: (context, index) {
-                      return _buildEntryItem(context, filteredEntries[index]);
-                    },
-                  );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) {
-                  print(err);
+                  debugPrint(err.toString());
                   return Center(child: Text('Error: $err'));
                 },
               ),
@@ -75,10 +69,85 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
     );
   }
 
+  /// 1. Standard List for A-Z, Nouns, etc. (No headers needed)
+  Widget _buildStandardList(List<UserDictionaryEntry> entries) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildEntryItem(context, entries[index]),
+        );
+      },
+    );
+  }
+
+  /// 2. Optimized Grouped List (Flattens Headers + Items into one list)
+  Widget _buildOptimizedGroupedList(List<UserDictionaryEntry> entries) {
+    // Flatten the data into a list of specific items (Headers or Entries)
+    final List<DictionaryListItem> flatList = [];
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekAgo = today.subtract(const Duration(days: 7));
+
+    String? lastHeaderKey;
+
+    for (var entry in entries) {
+      final entryDate = entry.createdAt;
+      final dateOnly = DateTime(entryDate.year, entryDate.month, entryDate.day);
+
+      // Determine the group key
+      String key;
+      if (dateOnly == today) {
+        key = 'Today';
+      } else if (dateOnly == yesterday) {
+        key = 'Yesterday';
+      } else if (dateOnly.isAfter(weekAgo)) {
+        key = 'This Week';
+      } else {
+        key = 'Older';
+      }
+
+      // If key changes, insert a HeaderItem first
+      if (key != lastHeaderKey) {
+        flatList.add(HeaderItem(key));
+        lastHeaderKey = key;
+      }
+
+      // Then insert the EntryItem
+      flatList.add(EntryItem(entry));
+    }
+
+    // Render using a single ListView.builder
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: flatList.length,
+      itemBuilder: (context, index) {
+        final item = flatList[index];
+
+        if (item is HeaderItem) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 12),
+            child: _buildSectionHeader(item.title),
+          );
+        } else if (item is EntryItem) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildEntryItem(context, item.entry),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
   List<UserDictionaryEntry> _filterEntries(List<UserDictionaryEntry> entries) {
     switch (_selectedFilter) {
       case DictionaryFilter.recent:
-        // Already sorted by createdAt DESC in repo
+        // Assuming repo returns sorted by date DESC. If not, sort here.
         return entries;
       case DictionaryFilter.az:
         final sorted = List<UserDictionaryEntry>.from(entries);
@@ -97,66 +166,8 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
             .where((e) => e.dictionary.type.toLowerCase().contains('adverb'))
             .toList();
       case DictionaryFilter.favorites:
-        // TODO: Implement favorites logic if backend supports it
         return [];
     }
-  }
-
-  Widget _buildGroupedList(List<UserDictionaryEntry> entries) {
-    final grouped = <String, List<UserDictionaryEntry>>{};
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final weekAgo = today.subtract(const Duration(days: 7));
-
-    for (var entry in entries) {
-      final entryDate =
-          entry.createdAt; // Assuming UTC or correct local handling if needed
-      final dateOnly = DateTime(entryDate.year, entryDate.month, entryDate.day);
-
-      String key;
-      if (dateOnly == today) {
-        key = 'Today';
-      } else if (dateOnly == yesterday) {
-        key = 'Yesterday';
-      } else if (dateOnly.isAfter(weekAgo)) {
-        key = 'This Week';
-      } else {
-        key = 'Older';
-      }
-
-      if (!grouped.containsKey(key)) {
-        grouped[key] = [];
-      }
-      grouped[key]!.add(entry);
-    }
-
-    // Ordered keys
-    final keys = [
-      'Today',
-      'Yesterday',
-      'This Week',
-      'Older',
-    ].where((k) => grouped.containsKey(k)).toList();
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: keys.length,
-      itemBuilder: (context, index) {
-        final key = keys[index];
-        final groupEntries = grouped[key]!;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSectionHeader(key),
-            const SizedBox(height: 12),
-            ...groupEntries.map((e) => _buildEntryItem(context, e)),
-            const SizedBox(height: 12),
-          ],
-        );
-      },
-    );
   }
 
   Widget _buildSectionHeader(String title) {
@@ -227,7 +238,6 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
       {'label': 'Nouns', 'filter': DictionaryFilter.nouns},
       {'label': 'Verbs', 'filter': DictionaryFilter.verbs},
       {'label': 'Adverbs', 'filter': DictionaryFilter.adverbs},
-      // {'label': 'Favorites', 'filter': DictionaryFilter.favorites},
     ];
 
     return Container(
@@ -340,7 +350,6 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
                       size: 16,
                     ),
                   ),
-
                   const SizedBox(width: 12),
                   const Text(
                     "My Dictionary",
@@ -354,7 +363,6 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
                   ),
                 ],
               ),
-              // Total count badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -368,13 +376,12 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
                     width: 2,
                   ),
                 ),
-
                 child: Column(
-                  crossAxisAlignment: .end,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       "TOTAL",
-                      textAlign: .right,
+                      textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontFamily: 'Fredoka',
                         fontSize: 10,
@@ -399,9 +406,24 @@ class _MyDictionaryViewState extends ConsumerState<MyDictionaryView> {
             ],
           ),
           _buildFilterTabs(),
-          // Search bar could go here
         ],
       ),
     );
   }
+}
+
+// ==========================================
+// HELPER CLASSES FOR OPTIMIZED LIST RENDER
+// ==========================================
+
+abstract class DictionaryListItem {}
+
+class HeaderItem implements DictionaryListItem {
+  final String title;
+  HeaderItem(this.title);
+}
+
+class EntryItem implements DictionaryListItem {
+  final UserDictionaryEntry entry;
+  EntryItem(this.entry);
 }

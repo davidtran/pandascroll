@@ -183,15 +183,7 @@ class _CaptionContainerState extends State<_CaptionContainer> {
               ),
               if (widget.translation.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-                const SizedBox(height: 8),
+
                 Text(
                   widget.translation,
                   style:

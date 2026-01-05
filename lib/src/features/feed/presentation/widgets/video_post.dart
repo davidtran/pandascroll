@@ -424,14 +424,6 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
             // Determine playing state for THIS page
             final isActivePage = index == _currentWindowIndex;
 
-            // Translation Logic
-            int translationOffset = 0;
-            if (widget.video.captions.isNotEmpty) {
-              for (int i = 0; i < index; i++) {
-                translationOffset += widget.video.captions[i].sentences.length;
-              }
-            }
-
             final currentWindowSentences = widget.video.captions.isNotEmpty
                 ? widget.video.captions[index].sentences
                 : <Caption>[];
@@ -441,13 +433,15 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
             );
             final allTranslations = translationsAsync.value ?? [];
 
+            // Get the specific translation window for this page/chunk
+            // Safety check: ensure index is within bounds
+            final TranslationWindow? currentTranslationWindow =
+                (index < allTranslations.length)
+                ? allTranslations[index]
+                : null;
+
             final windowTranslations =
-                (translationOffset < allTranslations.length)
-                ? allTranslations
-                      .skip(translationOffset)
-                      .take(currentWindowSentences.length)
-                      .toList()
-                : <String>[];
+                currentTranslationWindow?.sentences ?? [];
 
             return Stack(
               fit: StackFit.expand,
@@ -560,19 +554,19 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
 
                 // Save (Like)
-                _buildActionItem(
-                  Icons.favorite_rounded,
-                  "Save",
-                  Colors.white,
-                  isLike: true,
-                  onTap: () {
-                    // Reference implementation logic for like/save
-                  },
-                ),
-                const SizedBox(height: 10),
+                // _buildActionItem(
+                //   Icons.favorite_rounded,
+                //   "Save",
+                //   Colors.white,
+                //   isLike: true,
+                //   onTap: () {
+                //     // Reference implementation logic for like/save
+                //   },
+                // ),
+                // const SizedBox(height: 10),
 
                 // Audio
                 _buildActionItem(
@@ -607,25 +601,41 @@ class _VideoPostState extends ConsumerState<VideoPost> with RouteAware {
           left: 0,
           right: 0,
           child: widget.video.captions.isNotEmpty
-              ? VideoWindowControls(
-                  videoTitle: widget.video.title,
-                  currentChunkTitle:
-                      widget.video.captions[_currentWindowIndex].title,
-                  currentChunkIndex: _currentWindowIndex,
-                  totalChunks: widget.video.captions.length,
-                  hasPrev: _currentWindowIndex > 0,
-                  hasNext:
-                      _currentWindowIndex < widget.video.captions.length - 1,
-                  onPrev: () {
-                    _pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+              ? Consumer(
+                  builder: (context, ref, child) {
+                    final translationsAsync = ref.watch(
+                      videoTranslationsProvider(widget.video.id),
                     );
-                  },
-                  onNext: () {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+                    final allTranslations = translationsAsync.value ?? [];
+                    final currentTranslationWindow =
+                        (_currentWindowIndex < allTranslations.length)
+                        ? allTranslations[_currentWindowIndex]
+                        : null;
+                    final displayTitle =
+                        currentTranslationWindow?.title ??
+                        widget.video.captions[_currentWindowIndex].title;
+
+                    return VideoWindowControls(
+                      videoTitle: widget.video.title,
+                      currentChunkTitle: displayTitle,
+                      currentChunkIndex: _currentWindowIndex,
+                      totalChunks: widget.video.captions.length,
+                      hasPrev: _currentWindowIndex > 0,
+                      hasNext:
+                          _currentWindowIndex <
+                          widget.video.captions.length - 1,
+                      onPrev: () {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                      onNext: () {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
                     );
                   },
                 )
